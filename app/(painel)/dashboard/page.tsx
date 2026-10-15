@@ -5,7 +5,7 @@ import { getLeads, getMetrics } from "@/lib/data";
 
 export const metadata: Metadata = {
   title: "Dashboard",
-  description: "Métricas de atendimento e funil de vendas da SolarMais.",
+  description: "Métricas de atendimento e funil de vendas da EBS Energia Solar.",
 };
 
 export default async function DashboardPage() {

@@ -258,7 +258,7 @@ function conversation(leadId: string, startMinutesAgo: number, lines: Line[]): M
 const FULL_CONVERSATIONS: Message[] = [
   ...conversation("l1", 18, [
     ["lead", "Oi, vi o anúncio de vocês no Instagram. Queria saber sobre energia solar"],
-    ["ia", "Olá, Maria! 😊 Sou a assistente virtual da SolarMais. Vou te fazer algumas perguntas rápidas para montar uma simulação. Em qual cidade fica o imóvel?"],
+    ["ia", "Olá, Maria! 😊 Sou a assistente virtual da EBS Energia Solar. Vou te fazer algumas perguntas rápidas para montar uma simulação. Em qual cidade fica o imóvel?"],
     ["lead", "Teresina, no bairro Dirceu"],
     ["ia", "Ótimo, atendemos todo o Dirceu! Quanto vem, em média, a sua conta de luz por mês?"],
     ["lead", "Uns 680 reais. No B-R-O-Bró passa de 800 😅"],
@@ -274,7 +274,7 @@ const FULL_CONVERSATIONS: Message[] = [
   ]),
   ...conversation("l2", 42, [
     ["lead", "Boa tarde. Tenho um mercadinho em Timon e a energia tá me matando"],
-    ["ia", "Boa tarde, José! Sou a assistente da SolarMais e posso ajudar. Só para confirmar: o mercadinho fica em Timon mesmo?"],
+    ["ia", "Boa tarde, José! Sou a assistente da EBS Energia Solar e posso ajudar. Só para confirmar: o mercadinho fica em Timon mesmo?"],
     ["lead", "Isso, no bairro Parque Piauí"],
     ["ia", "Certo! Qual o valor médio da conta de energia do comércio?"],
     ["lead", "Entre 1.400 e 1.500. Tenho 3 freezers e 2 expositores"],
@@ -312,7 +312,7 @@ function defaultConversation(lead: Lead): Message[] {
   const first = lead.name.split(" ")[0];
   const lines: Line[] = [
     ["lead", "Olá, tenho interesse em energia solar"],
-    ["ia", `Olá, ${first}! Sou a assistente virtual da SolarMais ☀️ Em qual cidade fica o imóvel?`],
+    ["ia", `Olá, ${first}! Sou a assistente virtual da EBS Energia Solar ☀️ Em qual cidade fica o imóvel?`],
     ["lead", `${lead.city} - ${lead.state}`],
     ["ia", "Ótimo! E qual o valor médio da sua conta de luz?"],
     ["lead", `Fica em torno de R$ ${lead.billValue.toLocaleString("pt-BR")}`],

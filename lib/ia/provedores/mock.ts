@@ -96,7 +96,7 @@ export class ProvedorMock implements ProvedorIA {
         const pergunta = this.obterPergunta(prox, 0);
         const prefixo =
           msgsIa.length === 0
-            ? "Olá! 👋 Sou a assistente virtual da SolarMais. Recebi sua conta! ✅ "
+            ? "Olá! 👋 Sou a assistente virtual da EBS Energia Solar. Recebi sua conta! ✅ "
             : "Recebi sua conta! ✅ ";
         return {
           texto: `${prefixo}${pergunta}`,
@@ -109,7 +109,7 @@ export class ProvedorMock implements ProvedorIA {
     if (msgsIa.length === 0) {
       return {
         texto:
-          "Olá! 👋 Sou a assistente virtual da SolarMais. Vou fazer algumas perguntas rápidas para preparar sua simulação; ao continuar, você concorda com o uso dos seus dados para esse fim. Pode me informar sua cidade?",
+          "Olá! 👋 Sou a assistente virtual da EBS Energia Solar. Vou fazer algumas perguntas rápidas para preparar sua simulação; ao continuar, você concorda com o uso dos seus dados para esse fim. Pode me informar sua cidade?",
       };
     }
 

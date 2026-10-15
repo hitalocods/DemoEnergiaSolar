@@ -17,9 +17,9 @@ export default async function PainelLayout({
   return (
     <>
       <Sidebar user={user} pendingCount={pendingCount} />
-      <div className="flex min-h-dvh flex-col lg:pl-64">
+      <div className="flex min-h-dvh flex-col lg:pl-64 w-full max-w-full overflow-x-hidden">
         <Topbar user={user} />
-        <main className="flex-1 px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8">
+        <main className="flex-1 w-full max-w-full overflow-x-hidden px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8">
           {children}
         </main>
       </div>

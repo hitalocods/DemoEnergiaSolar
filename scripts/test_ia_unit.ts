@@ -98,7 +98,7 @@ async function runTests() {
   // Turno 1: Primeira resposta da IA
   const res1 = await provedor.responder({ lead, mensagens: msgs });
   console.log("Turno 1:", res1.texto);
-  assert(res1.texto.includes("Sou a assistente virtual da SolarMais"), "Deve apresentar assistente virtual");
+  assert(res1.texto.includes("Sou a assistente virtual da EBS Energia Solar"), "Deve apresentar assistente virtual");
   assert(res1.texto.includes("Pode me informar sua cidade?"), "Deve perguntar cidade");
 
   msgs.push({

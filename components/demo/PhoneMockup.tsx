@@ -10,6 +10,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { Message } from "@/lib/types";
+import Image from "next/image";
 import { cn, formatTime } from "@/lib/utils";
 
 interface PhoneMockupProps {
@@ -109,13 +110,19 @@ export function PhoneMockup({
         <div className="flex h-[590px] flex-col overflow-hidden rounded-[36px] bg-[#efeae2] shadow-inner">
           {/* Cabeçalho WhatsApp */}
           <header className="flex items-center gap-3 bg-[#075e54] px-4 py-3 text-white shadow-md">
-            <div className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 ring-2 ring-emerald-300/40">
-              <Bot className="size-5 text-white" />
+            <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-900 ring-2 ring-emerald-300/40">
+              <Image
+                src="/ebs-logo.png"
+                alt="EBS Energia Solar"
+                width={40}
+                height={40}
+                className="size-full object-cover scale-105"
+              />
               <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-400 ring-2 ring-[#075e54]" />
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="truncate font-sans text-sm font-bold tracking-tight text-white">
-                SolarMais · Assistente
+                EBS Energia Solar · Assistente
               </h3>
               <p className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-100">
                 {isTyping ? (
@@ -295,7 +302,7 @@ export function PhoneMockup({
         </div>
       </div>
       <p className="mt-3 text-xs text-slate-500">
-        Você está simulando o lead no WhatsApp interagindo com a assistente IA da SolarMais.
+        Você está simulando o lead no WhatsApp interagindo com a assistente IA da EBS Energia Solar.
       </p>
     </div>
   );
