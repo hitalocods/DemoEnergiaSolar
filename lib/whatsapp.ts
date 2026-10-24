@@ -77,7 +77,9 @@ export async function sendText(to: string, text: string): Promise<string> {
     return `demo-${crypto.randomUUID()}`;
   }
 
-  const isDryRun = (process.env.WHATSAPP_DRY_RUN || "").toLowerCase() === "true";
+  const isDryRun =
+    process.env.NODE_ENV !== "production" &&
+    (process.env.WHATSAPP_DRY_RUN || "").toLowerCase() === "true";
   if (isDryRun) {
     console.log(`[DRY RUN] para ${to}: ${text}`);
     return `dryrun-${crypto.randomUUID()}`;
@@ -171,7 +173,9 @@ export async function sendInteractiveButtons(
     return `demo-${crypto.randomUUID()}`;
   }
 
-  const isDryRun = (process.env.WHATSAPP_DRY_RUN || "").toLowerCase() === "true";
+  const isDryRun =
+    process.env.NODE_ENV !== "production" &&
+    (process.env.WHATSAPP_DRY_RUN || "").toLowerCase() === "true";
   if (isDryRun) {
     console.log(`[DRY RUN BUTTONS] para ${to}: ${bodyText} | Botões:`, buttons.map((b) => b.title).join(", "));
     return `dryrun-${crypto.randomUUID()}`;
@@ -252,7 +256,9 @@ export async function sendInteractiveList(
     return `demo-${crypto.randomUUID()}`;
   }
 
-  const isDryRun = (process.env.WHATSAPP_DRY_RUN || "").toLowerCase() === "true";
+  const isDryRun =
+    process.env.NODE_ENV !== "production" &&
+    (process.env.WHATSAPP_DRY_RUN || "").toLowerCase() === "true";
   if (isDryRun) {
     console.log(`[DRY RUN LIST] para ${to}: ${bodyText}`);
     return `dryrun-${crypto.randomUUID()}`;
