@@ -47,6 +47,9 @@ function mapLeadRow(
     ownProperty: row.imovelProprio,
     wantsFinancing: row.financiamento,
     adSource: row.origem,
+    origemTipo: (row.origemTipo as any) || "direto",
+    campanhaUtm: row.campanhaUtm ?? null,
+    gclid: row.gclid ?? null,
     interest: row.campanha || "Economia na conta de energia",
     attendance: row.atendimento,
     assignedTo: assumidoPorNome || undefined,
@@ -60,6 +63,15 @@ function mapLeadRow(
     refusedPhoto: row.recusouFoto,
     transferReason: row.motivoTransferencia || undefined,
     demo: row.demo,
+    canal: row.canal || "formulario",
+    notas: row.notas ?? null,
+    contatadoEm: row.contatadoEm ? row.contatadoEm.toISOString() : null,
+    statusLead: row.statusLead || "Novo",
+    utmMedium: row.utmMedium ?? null,
+    utmContent: row.utmContent ?? null,
+    fbclid: row.fbclid ?? null,
+    referrer: row.referrer ?? null,
+    economiaEstimada: row.economiaEstimada ? Number(row.economiaEstimada) : null,
   };
 }
 
@@ -207,6 +219,63 @@ export async function devolverParaIA(id: string): Promise<Lead> {
   return updated;
 }
 
+/** Marca o lead como contatado pelo consultor */
+export async function marcarLeadContatado(id: string): Promise<Lead> {
+  const user = await requireSessionUser();
+
+  const leadRow = await db
+    .select()
+    .from(leads)
+    .where(and(eq(leads.id, id), eq(leads.empresaId, user.empresaId)))
+    .limit(1);
+
+  if (leadRow.length === 0) {
+    throw new Error("Lead não encontrado ou não pertence a esta empresa.");
+  }
+
+  await db
+    .update(leads)
+    .set({
+      contatadoEm: new Date(),
+      statusLead: "Contatado",
+      atendimento: "humano",
+      assumidoPor: leadRow[0].assumidoPor || user.id,
+      atualizadoEm: new Date(),
+    })
+    .where(and(eq(leads.id, id), eq(leads.empresaId, user.empresaId)));
+
+  const updated = await getLead(id);
+  if (!updated) throw new Error("Erro ao carregar lead atualizado.");
+  return updated;
+}
+
+/** Salva as anotações do consultor no lead */
+export async function salvarNotasLead(id: string, notas: string): Promise<Lead> {
+  const user = await requireSessionUser();
+
+  const leadRow = await db
+    .select()
+    .from(leads)
+    .where(and(eq(leads.id, id), eq(leads.empresaId, user.empresaId)))
+    .limit(1);
+
+  if (leadRow.length === 0) {
+    throw new Error("Lead não encontrado ou não pertence a esta empresa.");
+  }
+
+  await db
+    .update(leads)
+    .set({
+      notas: notas.trim(),
+      atualizadoEm: new Date(),
+    })
+    .where(and(eq(leads.id, id), eq(leads.empresaId, user.empresaId)));
+
+  const updated = await getLead(id);
+  if (!updated) throw new Error("Erro ao carregar lead atualizado.");
+  return updated;
+}
+
 /** Move o lead para outra etapa do funil de vendas. */
 export async function updateLeadStage(
   id: string,
@@ -296,6 +365,8 @@ export async function getMessages(leadId: string): Promise<Message[]> {
         url: m.anexoUrl,
       }
       : undefined,
+    statusEntrega: (m.statusEntrega as any) || (m.autor === "lead" ? undefined : "sent"),
+    erroEntrega: m.erroEntrega,
   }));
 }
 
@@ -325,6 +396,7 @@ export async function sendMessage(
 
   const id = `${leadId}-m${Date.now()}`;
   const now = new Date();
+  const statusEntrega = waMessageId ? "sent" : "pending";
 
   await db.insert(mensagens).values({
     id,
@@ -334,6 +406,7 @@ export async function sendMessage(
     usuarioId: from === "humano" ? user.id : null,
     texto: text.trim(),
     waMessageId: waMessageId ?? null,
+    statusEntrega,
     criadoEm: now,
   });
 
@@ -343,6 +416,7 @@ export async function sendMessage(
     from,
     text: text.trim(),
     createdAt: now.toISOString(),
+    statusEntrega,
   };
 }
 
@@ -542,3 +616,85 @@ export async function getMetrics(
     funnel,
   };
 }
+
+export interface RelatorioOrigemItem {
+  origem: string;
+  origemTipo?: string;
+  leads: number;
+  qualificados: number;
+  vendas: number;
+  taxaConversao: number;
+}
+
+/** Relatório real de Leads por Origem (Fase 4A - exclui leads de demonstração) */
+export async function getLeadsPorOrigem(
+  period: PeriodKey = "30d"
+): Promise<RelatorioOrigemItem[]> {
+  const user = await requireSessionUser();
+  const days = PERIOD_DAYS[period] || 30;
+
+  const now = new Date();
+  const currentStart = new Date(now.getTime() - days * 86_400_000);
+
+  const rows = await db
+    .select({
+      lead: leads,
+      oportunidade: oportunidades,
+    })
+    .from(leads)
+    .leftJoin(oportunidades, eq(leads.id, oportunidades.leadId))
+    .where(
+      and(
+        eq(leads.empresaId, user.empresaId),
+        eq(leads.demo, false),
+        gte(leads.criadoEm, currentStart)
+      )
+    );
+
+  const mapOrigem = new Map<
+    string,
+    {
+      origem: string;
+      origemTipo?: string;
+      leads: number;
+      qualificados: number;
+      vendas: number;
+    }
+  >();
+
+  for (const r of rows) {
+    const nomeOrigem = r.lead.origem || "WhatsApp direto";
+    const existing = mapOrigem.get(nomeOrigem) || {
+      origem: nomeOrigem,
+      origemTipo: r.lead.origemTipo || undefined,
+      leads: 0,
+      qualificados: 0,
+      vendas: 0,
+    };
+
+    existing.leads++;
+    if (r.lead.temperatura === "quente" || r.lead.contaEnviada) {
+      existing.qualificados++;
+    }
+    if (r.oportunidade?.etapa === "venda") {
+      existing.vendas++;
+    }
+
+    mapOrigem.set(nomeOrigem, existing);
+  }
+
+  const items: RelatorioOrigemItem[] = Array.from(mapOrigem.values()).map(
+    (item) => ({
+      ...item,
+      taxaConversao:
+        item.leads > 0
+          ? Number(((item.vendas / item.leads) * 100).toFixed(1))
+          : 0,
+    })
+  );
+
+  items.sort((a, b) => b.leads - a.leads);
+
+  return items;
+}
+

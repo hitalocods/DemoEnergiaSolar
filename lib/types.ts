@@ -10,6 +10,35 @@ export type AttendanceMode = "ia" | "humano";
 
 export type FunnelStageId = "proposta" | "negociacao" | "venda" | "perdido";
 
+export type TipoCanalRastreio =
+  | "google_ads"
+  | "google_meu_negocio"
+  | "instagram"
+  | "site"
+  | "qr"
+  | "outro";
+
+export type OrigemTipo =
+  | "meta_ads"
+  | "google_ads"
+  | "google_meu_negocio"
+  | "instagram"
+  | "site"
+  | "qr"
+  | "outro"
+  | "direto";
+
+export interface CanalRastreio {
+  id: string;
+  empresaId: string;
+  nome: string;
+  tipo: TipoCanalRastreio;
+  codigo: string;
+  mensagemPadrao: string;
+  ativo: boolean;
+  criadoEm: string;
+}
+
 export interface Lead {
   id: string;
   name: string;
@@ -22,7 +51,10 @@ export interface Lead {
   createdAt: string; // ISO
   ownProperty: boolean | null; // null = ainda não informado
   wantsFinancing: boolean | null;
-  adSource: string; // origem do anúncio
+  adSource: string; // origem do anúncio (ex: nome do canal ou WhatsApp direto)
+  origemTipo?: OrigemTipo;
+  campanhaUtm?: string | null;
+  gclid?: string | null;
   interest: string;
   attendance: AttendanceMode;
   assignedTo?: string;
@@ -34,6 +66,15 @@ export interface Lead {
   refusedPhoto?: boolean; // se o lead recusou enviar a foto da conta
   transferReason?: string; // motivo da transferência para atendimento humano
   demo?: boolean; // se é um lead de simulação/demonstração
+  canal?: string | null; // canal de captura: 'formulario' | 'whatsapp'
+  notas?: string | null; // notas do consultor
+  contatadoEm?: string | null; // data/hora em que foi contatado
+  statusLead?: string | null; // 'Novo' | 'Contatado'
+  utmMedium?: string | null;
+  utmContent?: string | null;
+  fbclid?: string | null;
+  referrer?: string | null;
+  economiaEstimada?: number | null;
 }
 
 export type MessageAuthor = "ia" | "lead" | "humano";
@@ -45,6 +86,8 @@ export interface Message {
   text: string;
   createdAt: string; // ISO
   attachment?: { type: "image"; label: string; url?: string };
+  statusEntrega?: "pending" | "sent" | "delivered" | "read" | "failed";
+  erroEntrega?: string | null;
 }
 
 export interface FunnelStage {

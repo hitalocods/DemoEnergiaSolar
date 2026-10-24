@@ -1,16 +1,19 @@
-import dotenv from "dotenv";
-dotenv.config({ path: ".env.local" });
-
-import { eq } from "drizzle-orm";
-import { db } from "../db";
-import { leads, mensagens, oportunidades } from "../db/schema";
+import { config } from "dotenv";
+config({ path: ".env.local" });
 
 async function main() {
+  const { eq } = await import("drizzle-orm");
+  const { db } = await import("../db");
+  const { leads, mensagens, oportunidades } = await import("../db/schema");
+
   const args = process.argv.slice(2);
   let isNovo = false;
   let isFoto = false;
   let imagemCaminho = "";
   let leadNum = "1";
+  let refCode = "";
+  let metaAdId = "";
+  let customTelefone = "";
   const textWords: string[] = [];
 
   for (let i = 0; i < args.length; i++) {
@@ -20,20 +23,33 @@ async function main() {
     } else if (arg === "--lead") {
       leadNum = args[i + 1] || "1";
       i++;
+    } else if (arg === "--tel" || arg === "--telefone") {
+      customTelefone = (args[i + 1] || "").replace(/\D/g, "");
+      i++;
     } else if (arg === "--foto" || arg === "--imagem") {
       isFoto = true;
       if (args[i + 1] && !args[i + 1].startsWith("--")) {
         imagemCaminho = args[i + 1];
         i++;
       }
+    } else if (arg === "--ref") {
+      refCode = args[i + 1] || "";
+      i++;
+    } else if (arg === "--meta-ad") {
+      metaAdId = args[i + 1] || "";
+      i++;
     } else {
       textWords.push(arg);
     }
   }
 
-  const waId = leadNum === "1" ? "5586900000001" : `558690000000${leadNum}`;
-  const leadNome = leadNum === "1" ? "Teste Simulado" : `Teste Simulado ${leadNum}`;
-  const texto = textWords.join(" ").trim() || (isFoto ? "[imagem]" : "Olá! Gostaria de um orçamento.");
+  const waId = customTelefone || (leadNum === "1" ? "5586900000001" : `558690000000${leadNum}`);
+  const leadNome = customTelefone ? `Contato (${waId})` : (leadNum === "1" ? "Teste Simulado" : `Teste Simulado ${leadNum}`);
+  let texto = textWords.join(" ").trim() || (isFoto ? "[imagem]" : "Olá! Gostaria de um orçamento.");
+
+  if (refCode && !texto.includes("ref:")) {
+    texto = `${texto} (ref: ${refCode})`;
+  }
 
   if (isNovo) {
     console.log(`🧹 Removendo histórico do lead ${leadNome} (${waId})...`);
@@ -73,6 +89,13 @@ async function main() {
     };
   } else {
     messagePayload.text = { body: texto };
+  }
+
+  if (metaAdId) {
+    messagePayload.referral = {
+      source_id: metaAdId,
+      headline: "Anúncio Meta - Energia Solar Fotovoltaica",
+    };
   }
 
   const payload = {

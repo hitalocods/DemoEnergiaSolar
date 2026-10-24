@@ -1,15 +1,17 @@
 import crypto from "crypto";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { empresas, leads, mensagens } from "@/db/schema";
+import { empresas, leads, mensagens, canaisRastreio, cliquesOrigem } from "@/db/schema";
+import type { OrigemTipo } from "@/lib/types";
 import { sendText } from "@/lib/whatsapp";
-import { responderLead } from "./agente";
+import { processarFluxoBotoes } from "@/lib/fluxo-botoes";
 
 export interface ProcessarMensagemOptions {
   empresaId?: string;
   telefone: string;
   nome?: string;
   texto?: string;
+  botaoId?: string;
   anexoUrl?: string | null;
   anexoTipo?: string | null;
   waMessageId?: string | null;
@@ -17,6 +19,7 @@ export interface ProcessarMensagemOptions {
   origem?: string;
   anuncioId?: string | null;
   campanha?: string | null;
+  referral?: { source_id?: string; headline?: string } | null;
   isDemo?: boolean;
   eventoId?: string;
 }
@@ -51,6 +54,99 @@ export async function processarMensagemInbound(options: ProcessarMensagemOptions
 
   if (leadRows.length === 0) {
     leadId = `lead_${crypto.randomUUID()}`;
+
+    // IDENTIFICAÇÃO DE ORIGEM (só na PRIMEIRA mensagem de um lead novo)
+    let origemTipo: OrigemTipo = "direto";
+    let origemNome = options.origem || (isDemo ? "Demo" : "WhatsApp direto");
+    let anuncioId = options.anuncioId || null;
+    let campanha = options.campanha || null;
+    let campanhaUtm: string | null = null;
+    let gclid: string | null = null;
+
+    // 1. Se message.referral existir: origem_tipo "meta_ads", anuncio_id = source_id, campanha = headline
+    if (options.referral) {
+      origemTipo = "meta_ads";
+      anuncioId = options.referral.source_id || anuncioId;
+      campanha = options.referral.headline || campanha;
+      origemNome = "Anúncio Meta";
+    } else {
+      // 2. Senão, procure na mensagem o padrão "ref: XXXXXX" (6 a 8 caracteres A-Z0-9, sem diferenciar maiúscula)
+      const textoMensagem = options.texto || "";
+      const refMatch = textoMensagem.match(/(?:ref:\s*|\(ref:\s*)([A-Za-z0-9]{6,8})\)?/i);
+
+      if (refMatch) {
+        const codigoBuscado = refMatch[1].toUpperCase();
+
+        if (codigoBuscado.length === 8) {
+          // Busca em cliques_origem (8 caracteres)
+          const cliqueRows = await db
+            .select()
+            .from(cliquesOrigem)
+            .where(eq(cliquesOrigem.codigo, codigoBuscado))
+            .limit(1);
+
+          if (cliqueRows.length > 0) {
+            const clique = cliqueRows[0];
+            campanhaUtm = clique.utmCampaign;
+            gclid = clique.gclid;
+            if (clique.utmCampaign) {
+              campanha = clique.utmCampaign;
+            }
+
+            if (clique.canalId) {
+              const canalRows = await db
+                .select()
+                .from(canaisRastreio)
+                .where(eq(canaisRastreio.id, clique.canalId))
+                .limit(1);
+
+              if (canalRows.length > 0) {
+                origemTipo = canalRows[0].tipo as OrigemTipo;
+                origemNome = canalRows[0].nome;
+              } else {
+                origemTipo = "site";
+                origemNome = clique.utmSource || "Site";
+              }
+            } else {
+              origemTipo = "site";
+              origemNome = clique.utmSource || "Site";
+            }
+
+            // Marque cliques_origem.usado_em
+            await db
+              .update(cliquesOrigem)
+              .set({ usadoEm: new Date() })
+              .where(eq(cliquesOrigem.id, clique.id));
+          } else {
+            // Tenta também em canais_rastreio caso o código tenha sido salvo lá
+            const canalRows = await db
+              .select()
+              .from(canaisRastreio)
+              .where(eq(canaisRastreio.codigo, codigoBuscado))
+              .limit(1);
+
+            if (canalRows.length > 0) {
+              origemTipo = canalRows[0].tipo as OrigemTipo;
+              origemNome = canalRows[0].nome;
+            }
+          }
+        } else if (codigoBuscado.length === 6) {
+          // Busca em canais_rastreio (6 caracteres)
+          const canalRows = await db
+            .select()
+            .from(canaisRastreio)
+            .where(eq(canaisRastreio.codigo, codigoBuscado))
+            .limit(1);
+
+          if (canalRows.length > 0) {
+            origemTipo = canalRows[0].tipo as OrigemTipo;
+            origemNome = canalRows[0].nome;
+          }
+        }
+      }
+      // 3. Senão: origem_tipo "direto", origem "WhatsApp direto" (já inicializados)
+    }
+
     await db.insert(leads).values({
       id: leadId,
       empresaId,
@@ -61,9 +157,12 @@ export async function processarMensagemInbound(options: ProcessarMensagemOptions
       tipo: "residencial",
       temperatura: "aguardando_conta",
       atendimento: "ia",
-      origem: options.origem || (isDemo ? "Demo" : "WhatsApp direto"),
-      anuncioId: options.anuncioId || null,
-      campanha: options.campanha || null,
+      origem: origemNome,
+      origemTipo,
+      campanhaUtm,
+      gclid,
+      anuncioId,
+      campanha,
       demo: isDemo,
       ultimaMsgLeadEm: messageDate,
       criadoEm: messageDate,
@@ -109,27 +208,20 @@ export async function processarMensagemInbound(options: ProcessarMensagemOptions
     criadoEm: messageDate,
   });
 
-  // 5. Atendimento: IA inteligente (se IA_ATIVA=true) ou Eco de teste
-  const isIaAtiva = (process.env.IA_ATIVA || "true").toLowerCase() === "true";
-
-  if (atendimentoModo === "ia") {
-    if (isIaAtiva) {
-      console.log(`[PROCESSADOR] Acionando IA (responderLead) para o lead ${leadId}...`);
-      await responderLead(leadId, eventoId);
-    } else {
-      // Eco de teste quando IA_ATIVA=false
-      const ecoTexto = "Recebi sua mensagem ✅ (eco de teste)";
-      const ecoWaId = await sendText(telefone, ecoTexto);
-      await db.insert(mensagens).values({
-        id: `${leadId}-eco-${Date.now()}`,
-        empresaId,
+  // 5. Atendimento automático via Fluxo de Botões do WhatsApp
+  if (atendimentoModo === "ia" || options.botaoId) {
+    console.log(`[PROCESSADOR] Acionando Fluxo de Botões para o lead ${leadId}...`);
+    try {
+      await processarFluxoBotoes({
         leadId,
-        autor: "ia",
-        texto: ecoTexto,
-        waMessageId: ecoWaId,
-        criadoEm: new Date(),
+        telefone,
+        empresaId,
+        texto,
+        botaoId: options.botaoId,
       });
-      console.log(`[PROCESSADOR] Eco gravado com sucesso para lead ${leadId}`);
+      console.log(`[PROCESSADOR] Fluxo de Botões executado com sucesso para ${leadId}`);
+    } catch (btnErr) {
+      console.error("[PROCESSADOR] Erro ao executar fluxo de botões:", btnErr);
     }
   }
 

@@ -1,15 +1,16 @@
 import { after, NextResponse } from "next/server";
 import crypto from "crypto";
-import fs from "fs";
-import path from "path";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
   empresas,
   eventosWebhook,
+  mensagens,
 } from "@/db/schema";
 import {
   downloadAndStoreMedia,
+  getWhatsAppConfig,
+  normalizePhoneBR,
   verifyMetaSignature,
 } from "@/lib/whatsapp";
 import { processarMensagemInbound } from "@/lib/ia/processador";
@@ -18,8 +19,8 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 export const maxDuration = 60;
 
 /**
- * GET: Verificação da URL de Webhook pela Meta.
- * Meta envia: hub.mode, hub.verify_token e hub.challenge.
+ * GET: Verificação da URL de Webhook pela Meta (Cloud API).
+ * A Meta envia: hub.mode, hub.verify_token e hub.challenge.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -27,18 +28,18 @@ export async function GET(request: Request) {
   const token = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
 
-  const expectedToken =
-    process.env.WHATSAPP_VERIFY_TOKEN || "solarmais_webhook_verify_token_2026";
+  const config = getWhatsAppConfig();
+  const expectedToken = config.verifyToken || "solarmais_webhook_verify_token_2026";
 
   if (mode === "subscribe" && token === expectedToken) {
-    console.log("✓ Webhook WhatsApp verificado com sucesso pela Meta!");
+    console.log("✓ [WEBHOOK GET] Webhook verificado com sucesso pela Meta!");
     return new Response(challenge || "", {
       status: 200,
       headers: { "Content-Type": "text/plain" },
     });
   }
 
-  console.warn("Falha na verificação do Webhook WhatsApp: token inválido.", {
+  console.warn("⚠️ [WEBHOOK GET] Falha na verificação do token:", {
     tokenRecebido: token,
     modo: mode,
   });
@@ -46,14 +47,14 @@ export async function GET(request: Request) {
 }
 
 /**
- * POST: Notificações de eventos e mensagens da WhatsApp Cloud API.
+ * POST: Notificações de eventos, mensagens e status da WhatsApp Cloud API.
  */
 export async function POST(request: Request) {
-  // 0. Rate limit simples por IP (30 req/min)
+  // 0. Rate limit simples por IP (60 req/min)
   const clientIp = getClientIp(new Headers(request.headers));
-  const rl = checkRateLimit(`webhook_${clientIp}`, 30, 60 * 1000);
+  const rl = checkRateLimit(`webhook_${clientIp}`, 60, 60 * 1000);
   if (!rl.success) {
-    console.warn(`[RATE LIMIT] IP ${clientIp} atingiu o limite de 30 req/min no webhook.`);
+    console.warn(`[RATE LIMIT] IP ${clientIp} excedeu limite no webhook.`);
     return new Response("Too Many Requests", {
       status: 429,
       headers: { "Retry-After": String(rl.retryAfterSeconds || 60) },
@@ -62,22 +63,17 @@ export async function POST(request: Request) {
 
   const rawBody = await request.text();
   const signature = request.headers.get("x-hub-signature-256");
-  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  const config = getWhatsAppConfig();
 
-  // 1. Validação de assinatura HMAC SHA256 timing-safe (bypass exclusivo em NODE_ENV=development)
-  const isDev = process.env.NODE_ENV === "development";
-  if (!isDev) {
-    if (!appSecret) {
-      console.error("[SEGURANÇA] WHATSAPP_APP_SECRET não está configurado em produção.");
-      return new Response("Webhook secret ausente", { status: 500 });
-    }
-    const isValid = verifyMetaSignature(rawBody, signature, appSecret);
+  // 1. Validação de assinatura HMAC-SHA256 se APP_SECRET estiver configurado
+  if (config.appSecret) {
+    const isValid = verifyMetaSignature(rawBody, signature, config.appSecret);
     if (!isValid) {
-      console.warn("Assinatura X-Hub-Signature-256 inválida no webhook.");
+      console.error("❌ [WEBHOOK POST] Assinatura X-Hub-Signature-256 inválida ou rejeitada.");
       return new Response("Unauthorized", { status: 401 });
     }
-  } else {
-    console.log("ℹ️ [DEV] Bypass da validação de assinatura do webhook ativo para testes locais.");
+  } else if (process.env.NODE_ENV === "production") {
+    console.warn("⚠️ [WEBHOOK POST] APP_SECRET não configurado nas variáveis de ambiente de produção.");
   }
 
   // 2. Registra o evento recebido na tabela eventos_webhook para auditoria
@@ -106,9 +102,7 @@ export async function POST(request: Request) {
   // 3. Processamento assíncrono em segundo plano (after de next/server)
   after(async () => {
     try {
-      console.log(`[WEBHOOK] Iniciando after() para evento ${eventoId}...`);
       await processWebhookPayload(parsedPayload, eventoId);
-      console.log(`[WEBHOOK] Concluído after() com sucesso para evento ${eventoId}`);
     } catch (err: unknown) {
       const errMsg =
         err instanceof Error ? err.message : "Erro desconhecido no webhook";
@@ -125,7 +119,7 @@ export async function POST(request: Request) {
     }
   });
 
-  // 4. Responde 200 OK imediatamente para a Meta não reenviar
+  // 4. Responde 200 OK imediatamente para a Meta confirmar recebimento
   return NextResponse.json({ status: "received" }, { status: 200 });
 }
 
@@ -136,27 +130,49 @@ interface MetaWebhookMessage {
   type: string;
   text?: { body: string };
   image?: { id: string; caption?: string; mime_type?: string };
-  referral?: { source_id?: string; headline?: string };
-}
-
-interface MetaWebhookContact {
-  profile?: { name?: string };
-  wa_id: string;
-}
-
-interface MetaWebhookChange {
-  value: {
-    messaging_product?: string;
-    metadata?: { display_phone_number: string; phone_number_id: string };
-    contacts?: MetaWebhookContact[];
-    messages?: MetaWebhookMessage[];
-    statuses?: unknown[];
+  interactive?: {
+    type: string;
+    button_reply?: { id: string; title: string };
+    list_reply?: { id: string; title: string; description?: string };
   };
+  context?: {
+    id: string; // wamid da mensagem respondida
+  };
+}
+
+interface MetaWebhookStatus {
+  id: string; // wamid da mensagem
+  status: "sent" | "delivered" | "read" | "failed";
+  timestamp: string;
+  recipient_id: string;
+  errors?: Array<{
+    code: number;
+    title: string;
+    message?: string;
+    error_data?: Record<string, unknown>;
+  }>;
+}
+
+interface MetaWebhookChangeValue {
+  messaging_product: string;
+  metadata: {
+    display_phone_number: string;
+    phone_number_id: string;
+  };
+  contacts?: Array<{
+    profile: { name: string };
+    wa_id: string;
+  }>;
+  messages?: MetaWebhookMessage[];
+  statuses?: MetaWebhookStatus[];
 }
 
 interface MetaWebhookEntry {
   id: string;
-  changes?: MetaWebhookChange[];
+  changes: Array<{
+    field: string;
+    value: MetaWebhookChangeValue;
+  }>;
 }
 
 async function processWebhookPayload(
@@ -172,84 +188,136 @@ async function processWebhookPayload(
   for (const entry of entries) {
     for (const change of entry.changes || []) {
       const val = change.value;
-      if (!val || val.statuses) {
-        // Ignora status de entrega (sent/delivered/read)
+      if (!val) continue;
+
+      // =========================================================================
+      // 1. Processar status de entrega assíncronos da Meta (sent, delivered, read, failed)
+      // =========================================================================
+      if (val.statuses && Array.isArray(val.statuses)) {
+        for (const st of val.statuses) {
+          console.log("[WEBHOOK STATUS CRU]", JSON.stringify(st, null, 2));
+          const wamid = st.id;
+          const status = st.status;
+
+          try {
+            const msgRows = await db
+              .select()
+              .from(mensagens)
+              .where(eq(mensagens.waMessageId, wamid))
+              .limit(1);
+
+            if (msgRows.length > 0) {
+              const msgId = msgRows[0].id;
+
+              if (status === "failed") {
+                // Salvar campo errors completo dos failed
+                const errorsCompleto = JSON.stringify(st.errors || []);
+                const errorDetail =
+                  st.errors?.[0]?.message ||
+                  st.errors?.[0]?.title ||
+                  "Falha na entrega da Meta";
+
+                console.error(`❌ [MENSAGEM FALHOU NA META] ID: ${wamid} | Erros: ${errorsCompleto}`);
+
+                await db
+                  .update(mensagens)
+                  .set({
+                    statusEntrega: "failed",
+                    erroEntrega: errorDetail,
+                  })
+                  .where(eq(mensagens.id, msgId));
+              } else if (status === "read") {
+                await db
+                  .update(mensagens)
+                  .set({ statusEntrega: "read" })
+                  .where(eq(mensagens.id, msgId));
+              } else if (status === "delivered") {
+                // Não sobrepõe 'read' se já tiver sido lida
+                if (msgRows[0].statusEntrega !== "read") {
+                  await db
+                    .update(mensagens)
+                    .set({ statusEntrega: "delivered" })
+                    .where(eq(mensagens.id, msgId));
+                }
+              } else if (status === "sent") {
+                if (!msgRows[0].statusEntrega || msgRows[0].statusEntrega === "pending") {
+                  await db
+                    .update(mensagens)
+                    .set({ statusEntrega: "sent" })
+                    .where(eq(mensagens.id, msgId));
+                }
+              }
+            }
+          } catch (statusErr) {
+            console.error("Erro ao atualizar status da mensagem no CRM:", statusErr);
+          }
+        }
         continue;
       }
 
+      // =========================================================================
+      // 2. Processar mensagens recebidas do lead (messages)
+      // =========================================================================
       if (!val.messages || !Array.isArray(val.messages)) {
         continue;
       }
 
       for (const message of val.messages) {
-        const telefone = message.from; // formato wa_id como veio da Meta
-        const contact = val.contacts?.find((c) => c.wa_id === telefone);
-        const contactName = contact?.profile?.name || telefone;
+        // Normaliza o número recebido garantindo formato BR com 9 dígitos
+        const rawPhone = message.from;
+        const telefone = normalizePhoneBR(rawPhone);
+
+        const contact = val.contacts?.find((c: any) => c.wa_id === rawPhone || c.wa_id === telefone);
+        const contactName = contact?.profile?.name || rawPhone;
 
         const messageDate = message.timestamp
           ? new Date(Number(message.timestamp) * 1000)
           : new Date();
 
-        // Processar anexo de imagem se houver
         let texto = "";
+        let botaoId: string | undefined = undefined;
         let anexoUrl: string | null = null;
         let anexoTipo: string | null = null;
 
         if (message.type === "text" && message.text) {
           texto = message.text.body;
-        } else if (message.type === "image" && message.image) {
-          const mediaId = message.image.id || "";
-          const isDev = process.env.NODE_ENV === "development";
-
-          if (isDev && mediaId.startsWith("local:")) {
-            try {
-              const localPath = mediaId.slice(6);
-              const ext = path.extname(localPath) || ".jpg";
-              const filename = `${crypto.randomUUID()}${ext}`;
-              const uploadsDir = path.join(process.cwd(), "public", "uploads");
-
-              if (!fs.existsSync(uploadsDir)) {
-                fs.mkdirSync(uploadsDir, { recursive: true });
-              }
-
-              const destPath = path.join(uploadsDir, filename);
-              fs.copyFileSync(localPath, destPath);
-              anexoUrl = `/uploads/${filename}`;
-              anexoTipo = "image";
-              console.log(`[WEBHOOK] Imagem local copiada para ${anexoUrl}`);
-            } catch (copyErr) {
-              console.error("[WEBHOOK] Erro ao copiar imagem local:", copyErr);
-            }
-          } else if (!mediaId.startsWith("local:")) {
-            const mediaResult = await downloadAndStoreMedia(message.image.id);
-            anexoUrl = mediaResult?.url ?? null;
-            anexoTipo = "image";
-          } else {
-            console.warn(
-              "[WEBHOOK SEGURANÇA] Anexo com prefixo 'local:' ignorado fora de ambiente de desenvolvimento."
-            );
+        } else if (message.type === "interactive" && message.interactive) {
+          if (message.interactive.button_reply) {
+            texto = message.interactive.button_reply.title;
+            botaoId = message.interactive.button_reply.id;
+          } else if (message.interactive.list_reply) {
+            texto = message.interactive.list_reply.title;
+            botaoId = message.interactive.list_reply.id;
           }
-          texto = message.image.caption || "[imagem]";
+        } else if (message.type === "image" && message.image) {
+          texto = message.image.caption || "[Foto da conta enviada pelo WhatsApp]";
+          anexoTipo = message.image.mime_type || "image/jpeg";
+
+          const mediaResult = await downloadAndStoreMedia(message.image.id);
+          if (mediaResult) {
+            anexoUrl = mediaResult.url;
+            anexoTipo = mediaResult.mimeType;
+          }
         } else {
-          texto = `[mensagem do tipo ${message.type}, ainda não suportada]`;
+          texto = `[Mensagem do tipo ${message.type} recebida]`;
         }
 
+        console.log(`[WEBHOOK INBOUND] De: ${contactName} (${telefone}) | Texto: "${texto}"`);
+
+        // Processa no pipeline do bot / CRM
         await processarMensagemInbound({
           empresaId,
           telefone,
           nome: contactName,
           texto,
+          botaoId,
           anexoUrl,
           anexoTipo,
-          waMessageId: message.id,
           messageDate,
-          origem: message.referral ? "Anúncio Meta" : undefined,
-          anuncioId: message.referral?.source_id || null,
-          campanha: message.referral?.headline || null,
+          waMessageId: message.id,
           eventoId,
         });
       }
     }
   }
 }
-

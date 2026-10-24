@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import type { Message } from "@/lib/types";
 import Image from "next/image";
-import { cn, formatTime } from "@/lib/utils";
+import { cn, formatTime, stripRefCode } from "@/lib/utils";
 
 interface PhoneMockupProps {
   messages: Message[];
@@ -204,7 +204,7 @@ export function PhoneMockup({
 
                     {/* Texto da mensagem */}
                     {m.text && m.text !== "[imagem]" && (
-                      <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                      <p className="whitespace-pre-wrap break-words">{stripRefCode(m.text)}</p>
                     )}
 
                     {/* Rodapé da bolha: hora e status de entrega */}

@@ -18,10 +18,12 @@ import {
   assumirLead,
   devolverParaIA,
   getMetrics,
+  marcarLeadContatado,
+  salvarNotasLead,
   sendMessage,
   updateLeadStage,
 } from "@/lib/data";
-import type { FunnelStageId, Lead, Message, Metrics, PeriodKey } from "@/lib/types";
+import type { CanalRastreio, FunnelStageId, Lead, Message, Metrics, PeriodKey } from "@/lib/types";
 
 export interface ActionResult<T = unknown> {
   success: boolean;
@@ -97,6 +99,29 @@ export async function devolverParaIAAction(leadId: string): Promise<Lead> {
   return updated;
 }
 
+/** Marcar lead como contatado pelo consultor */
+export async function marcarLeadContatadoAction(leadId: string): Promise<Lead> {
+  await requireSessionUser();
+  const updated = await marcarLeadContatado(leadId);
+  revalidatePath("/dashboard");
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/vendas");
+  return updated;
+}
+
+/** Salvar notas e observações do consultor sobre o lead */
+export async function salvarNotasLeadAction(
+  leadId: string,
+  notas: string
+): Promise<Lead> {
+  await requireSessionUser();
+  const updated = await salvarNotasLead(leadId, notas);
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+  return updated;
+}
+
 /** Mover lead entre as etapas do funil de vendas */
 export async function updateLeadStageAction(
   leadId: string,
@@ -133,15 +158,19 @@ export async function sendMessageAction(
     throw new Error("Assuma o lead antes de enviar mensagens.");
   }
 
-  // Validação da janela de 24h da Meta para mensagens iniciadas pela empresa
-  if (lead.ultimaMsgLeadEm) {
-    const elapsedMs = Date.now() - new Date(lead.ultimaMsgLeadEm).getTime();
-    const twentyFourHoursMs = 24 * 60 * 60 * 1000;
-    if (elapsedMs > twentyFourHoursMs) {
-      throw new Error(
-        "Janela de 24h expirada: só é possível enviar um template aprovado"
-      );
-    }
+  // Validação da janela de 24h da Meta para mensagens free-form iniciadas pela empresa
+  if (!lead.ultimaMsgLeadEm) {
+    throw new Error(
+      "Janela de 24h fechada: o lead ainda não enviou mensagem pelo WhatsApp. Respostas livres (free-form) só são permitidas dentro de 24h da última mensagem do lead; fora dela a Meta exige template aprovado."
+    );
+  }
+
+  const elapsedMs = Date.now() - new Date(lead.ultimaMsgLeadEm).getTime();
+  const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+  if (elapsedMs > twentyFourHoursMs) {
+    throw new Error(
+      "Janela de 24h expirada: o lead não interagiu nas últimas 24 horas. A Meta exige envio de um template aprovado para reabrir a conversa."
+    );
   }
 
   // Envia via WhatsApp (ou simula em dry-run se WHATSAPP_DRY_RUN=true)
@@ -260,5 +289,146 @@ export async function limparLeadsDemoAction(): Promise<{
   revalidatePath("/leads");
   revalidatePath("/dashboard");
   return { success: true, count };
+}
+
+/** Obtém a lista de canais de rastreio da empresa (ou cria os canais padrão na primeira consulta) */
+export async function getCanaisRastreioAction(): Promise<CanalRastreio[]> {
+  const user = await requireSessionUser();
+  const { canaisRastreio } = await import("@/db/schema");
+  const { desc } = await import("drizzle-orm");
+
+  const rows = await db
+    .select()
+    .from(canaisRastreio)
+    .where(eq(canaisRastreio.empresaId, user.empresaId))
+    .orderBy(desc(canaisRastreio.criadoEm));
+
+  if (rows.length > 0) {
+    return rows.map((r) => ({
+      id: r.id,
+      empresaId: r.empresaId,
+      nome: r.nome,
+      tipo: r.tipo as any,
+      codigo: r.codigo,
+      mensagemPadrao: r.mensagemPadrao,
+      ativo: r.ativo,
+      criadoEm: r.criadoEm.toISOString(),
+    }));
+  }
+
+  // Se ainda não existirem canais, inicializa 3 canais essenciais para o cliente
+  const canaisIniciais = [
+    {
+      id: `canal_${Date.now()}_1`,
+      empresaId: user.empresaId,
+      nome: "Instagram Bio",
+      tipo: "instagram" as const,
+      codigo: "IGBIO1",
+      mensagemPadrao: "Olá! Vi o link no Instagram da EBS Energia Solar e gostaria de uma simulação",
+    },
+    {
+      id: `canal_${Date.now()}_2`,
+      empresaId: user.empresaId,
+      nome: "Google Meu Negócio",
+      tipo: "google_meu_negocio" as const,
+      codigo: "GMN001",
+      mensagemPadrao: "Olá! Encontrei a EBS Energia Solar no Google e quero economizar na minha conta de luz",
+    },
+    {
+      id: `canal_${Date.now()}_3`,
+      empresaId: user.empresaId,
+      nome: "QR Code - Cartão / Panfleto",
+      tipo: "qr" as const,
+      codigo: "QRC001",
+      mensagemPadrao: "Olá! Escaneei o QR Code da EBS Energia Solar e quero conhecer a proposta",
+    },
+  ];
+
+  await db.insert(canaisRastreio).values(canaisIniciais);
+
+  return canaisIniciais.map((c) => ({
+    ...c,
+    ativo: true,
+    criadoEm: new Date().toISOString(),
+  }));
+}
+
+/** Cria um novo canal de rastreio de origem com código único de 6 caracteres */
+export async function criarCanalRastreioAction(formData: FormData): Promise<{
+  success: boolean;
+  canal?: CanalRastreio;
+  error?: string;
+}> {
+  const user = await requireSessionUser();
+  const nome = (formData.get("nome") as string)?.trim();
+  const tipo = (formData.get("tipo") as string)?.trim() || "outro";
+  const mensagemPadrao =
+    (formData.get("mensagemPadrao") as string)?.trim() ||
+    "Olá! Gostaria de uma simulação de energia solar";
+
+  if (!nome) {
+    return { success: false, error: "Nome do canal é obrigatório." };
+  }
+
+  const { canaisRastreio } = await import("@/db/schema");
+  const cryptoModule = await import("crypto");
+
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let codigo = "";
+  for (let t = 0; t < 5; t++) {
+    let gerado = "";
+    const bytes = cryptoModule.randomBytes(6);
+    for (let i = 0; i < 6; i++) {
+      gerado += chars[bytes[i] % chars.length];
+    }
+    const existe = await db
+      .select({ id: canaisRastreio.id })
+      .from(canaisRastreio)
+      .where(eq(canaisRastreio.codigo, gerado))
+      .limit(1);
+    if (existe.length === 0) {
+      codigo = gerado;
+      break;
+    }
+  }
+
+  if (!codigo) {
+    codigo = `CH${Date.now().toString().slice(-4)}`;
+  }
+
+  const id = `canal_${Date.now()}_${cryptoModule.randomUUID().slice(0, 6)}`;
+
+  await db.insert(canaisRastreio).values({
+    id,
+    empresaId: user.empresaId,
+    nome,
+    tipo: tipo as any,
+    codigo,
+    mensagemPadrao,
+    ativo: true,
+    criadoEm: new Date(),
+  });
+
+  revalidatePath("/configuracoes");
+
+  return {
+    success: true,
+    canal: {
+      id,
+      empresaId: user.empresaId,
+      nome,
+      tipo: tipo as any,
+      codigo,
+      mensagemPadrao,
+      ativo: true,
+      criadoEm: new Date().toISOString(),
+    },
+  };
+}
+
+/** Obtém o relatório de leads por origem para o período selecionado */
+export async function getRelatorioOrigemAction(period: PeriodKey = "30d") {
+  const { getLeadsPorOrigem } = await import("@/lib/data");
+  return await getLeadsPorOrigem(period);
 }
 

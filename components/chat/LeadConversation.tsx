@@ -5,20 +5,25 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  CheckCircle2,
+  FileText,
+  Loader2,
   MessageCircle,
   PanelRightOpen,
+  PhoneCall,
   UserX,
 } from "lucide-react";
 import useSWR from "swr";
 import {
   assumirLeadAction,
   devolverParaIAAction,
+  marcarLeadContatadoAction,
   sendMessageAction,
 } from "@/app/actions";
 import type { AttendanceMode, Lead, Message } from "@/lib/types";
 import { formatPhone, whatsappUrl } from "@/lib/utils";
 import { Avatar } from "@/components/ui/Avatar";
-import { ButtonLink } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Primitives";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { AttendanceToggle } from "./AttendanceToggle";
@@ -47,8 +52,13 @@ export function LeadConversation({
   const router = useRouter();
   const [lead, setLead] = useState<Lead | null>(initialLead);
   const [busy, setBusy] = useState(false);
+  const [contatando, setContatando] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const isContatado = Boolean(
+    lead?.contatadoEm || lead?.statusLead === "Contatado"
+  );
 
   const leadId = initialLead?.id || "";
 
@@ -72,6 +82,20 @@ export function LeadConversation({
   }, [messages?.length]);
 
   const groups = useMemo(() => groupByDay(messages ?? []), [messages]);
+
+  async function handleMarcarContatado() {
+    if (!lead) return;
+    setContatando(true);
+    try {
+      const updated = await marcarLeadContatadoAction(lead.id);
+      setLead(updated);
+      router.refresh();
+    } catch (err) {
+      console.error("Erro ao marcar lead como contatado:", err);
+    } finally {
+      setContatando(false);
+    }
+  }
 
   async function changeMode(mode: AttendanceMode) {
     if (!lead) return;
@@ -140,6 +164,20 @@ export function LeadConversation({
               <h1 className="truncate font-display text-base font-bold text-slate-900 sm:text-lg">
                 {lead.name}
               </h1>
+              {lead.canal === "formulário" && (
+                <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-bold text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
+                  Formulário
+                </span>
+              )}
+              {isContatado ? (
+                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                  <CheckCircle2 className="size-3" /> Contatado
+                </span>
+              ) : (
+                <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                  Novo
+                </span>
+              )}
               <StatusBadge
                 status={lead.status}
                 className="hidden sm:inline-flex"
@@ -164,8 +202,30 @@ export function LeadConversation({
             busy={busy}
             onChange={changeMode}
           />
+
+          {!isContatado ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleMarcarContatado}
+              disabled={contatando}
+              className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+            >
+              {contatando ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <PhoneCall className="size-4 text-emerald-600" />
+              )}
+              <span className="hidden sm:inline">Marcar como contatado</span>
+            </Button>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+              <CheckCircle2 className="size-3.5" /> Contatado
+            </span>
+          )}
+
           <ButtonLink
-            href={whatsappUrl(lead.phone, lead.name)}
+            href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
             external
             variant="whatsapp"
             size="sm"
@@ -186,6 +246,28 @@ export function LeadConversation({
             ref={scrollRef}
             className="chat-wallpaper scrollbar-thin flex-1 space-y-3 overflow-y-auto p-3 sm:p-5"
           >
+            {messages.length === 0 && (
+              <div className="mx-auto my-12 max-w-sm rounded-2xl border border-dashed border-slate-200 bg-white/70 p-6 text-center">
+                <MessageCircle className="mx-auto size-8 text-slate-300" />
+                <h3 className="mt-2.5 font-display text-sm font-semibold text-slate-700">
+                  Nenhuma mensagem ainda
+                </h3>
+                <p className="mt-1 text-xs text-slate-400">
+                  As mensagens trocadas com o lead via WhatsApp aparecerão aqui em tempo real.
+                </p>
+                <div className="mt-4 flex justify-center">
+                  <ButtonLink
+                    href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
+                    external
+                    variant="whatsapp"
+                    size="sm"
+                  >
+                    <MessageCircle className="size-4" /> Abrir conversa no WhatsApp
+                  </ButtonLink>
+                </div>
+              </div>
+            )}
+
             {groups.map(([day, items]) => (
               <div key={day} className="space-y-3">
                 <div className="sticky top-0 z-10 flex justify-center py-1">
@@ -203,7 +285,7 @@ export function LeadConversation({
               </div>
             ))}
 
-            {isHuman && (
+            {isHuman && messages.length > 0 && (
               <div className="flex justify-center pt-1">
                 <span className="rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-800 ring-1 ring-amber-600/15">
                   {lead.assignedTo
@@ -223,7 +305,7 @@ export function LeadConversation({
         </section>
 
         <aside className="hidden min-h-0 overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-soft lg:block">
-          <LeadProfile lead={lead} />
+          <LeadProfile lead={lead} onLeadUpdate={(up) => setLead(up)} />
         </aside>
       </div>
 
@@ -241,7 +323,11 @@ export function LeadConversation({
             className="absolute inset-0 animate-[fade-up_0.2s_ease-out] bg-slate-900/40 backdrop-blur-sm"
           />
           <div className="absolute inset-y-0 right-0 w-full max-w-sm animate-pop bg-white shadow-2xl">
-            <LeadProfile lead={lead} onClose={() => setProfileOpen(false)} />
+            <LeadProfile
+              lead={lead}
+              onClose={() => setProfileOpen(false)}
+              onLeadUpdate={(up) => setLead(up)}
+            />
           </div>
         </div>
       )}

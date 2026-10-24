@@ -1,6 +1,6 @@
-import { Bot, CheckCheck, FileImage, UserRound } from "lucide-react";
+import { AlertCircle, Bot, Check, CheckCheck, Clock, FileImage, UserRound } from "lucide-react";
 import type { Message } from "@/lib/types";
-import { cn, formatTime } from "@/lib/utils";
+import { cn, formatTime, stripRefCode } from "@/lib/utils";
 
 /**
  * Bolha de mensagem estilo WhatsApp.
@@ -66,11 +66,44 @@ export function MessageBubble({ message, leadName }: { message: Message; leadNam
           </div>
         )}
 
-        <p className="whitespace-pre-wrap break-words">{message.text}</p>
+        <p className="whitespace-pre-wrap break-words">{stripRefCode(message.text)}</p>
+
+        {message.statusEntrega === "failed" && (
+          <div className="mt-1 flex items-center gap-1 rounded-md bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-600 ring-1 ring-inset ring-red-200">
+            <AlertCircle className="size-3 shrink-0" />
+            <span className="truncate" title={message.erroEntrega || "Erro na entrega Meta"}>
+              {message.erroEntrega ? `Falha: ${message.erroEntrega}` : "Falha na entrega Meta"}
+            </span>
+          </div>
+        )}
 
         <span className="mt-0.5 flex items-center justify-end gap-1 text-[10.5px] text-slate-400 tabular">
           {formatTime(message.createdAt)}
-          {!fromLead && <CheckCheck className="size-3.5 text-blue-500" />}
+          {!fromLead && (
+            <>
+              {message.statusEntrega === "failed" ? (
+                <span title="Falha no envio">
+                  <AlertCircle className="size-3 text-red-500" />
+                </span>
+              ) : message.statusEntrega === "read" ? (
+                <span title="Lido">
+                  <CheckCheck className="size-3.5 text-blue-500" />
+                </span>
+              ) : message.statusEntrega === "delivered" ? (
+                <span title="Entregue">
+                  <CheckCheck className="size-3.5 text-slate-400" />
+                </span>
+              ) : message.statusEntrega === "sent" ? (
+                <span title="Enviado">
+                  <Check className="size-3.5 text-slate-400" />
+                </span>
+              ) : (
+                <span title="Aguardando envio">
+                  <Clock className="size-3 text-slate-400" />
+                </span>
+              )}
+            </>
+          )}
         </span>
       </div>
 

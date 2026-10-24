@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowDownWideNarrow, ChevronDown, SearchX } from "lucide-react";
+import { ArrowDownWideNarrow, ChevronDown, Filter, SearchX } from "lucide-react";
 import type { Lead, LeadStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/Primitives";
@@ -40,6 +40,15 @@ export function LeadsView({
   const [leadsList, setLeadsList] = useState<Lead[]>(initialLeads);
   const [tab, setTab] = useState<TabKey>("todos");
   const [sort, setSort] = useState<SortKey>("recentes");
+  const [origemFiltro, setOrigemFiltro] = useState<string>("todas");
+
+  const origensDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    leadsList.forEach((l) => {
+      if (l.adSource) set.add(l.adSource);
+    });
+    return Array.from(set).sort();
+  }, [leadsList]);
 
   const counts = useMemo(() => {
     const c: Record<TabKey, number> = {
@@ -57,9 +66,13 @@ export function LeadsView({
   const visible = useMemo(
     () =>
       leadsList
-        .filter((l) => tab === "todos" || l.status === tab)
+        .filter(
+          (l) =>
+            (tab === "todos" || l.status === tab) &&
+            (origemFiltro === "todas" || l.adSource === origemFiltro)
+        )
         .sort(SORTS[sort].fn),
-    [leadsList, tab, sort]
+    [leadsList, tab, origemFiltro, sort]
   );
 
   function handleLeadAssumido(updated: Lead) {
@@ -114,23 +127,46 @@ export function LeadsView({
           })}
         </div>
 
-        <label className="relative inline-flex items-center self-start md:self-auto">
-          <span className="sr-only">Ordenar</span>
-          <ArrowDownWideNarrow className="pointer-events-none absolute left-3 size-4 text-slate-500" />
-          <select
-            id="ordenacao-leads"
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
-            className="h-10 cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-sm font-semibold text-slate-700 outline-none transition hover:border-slate-300 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
-          >
-            {(Object.keys(SORTS) as SortKey[]).map((key) => (
-              <option key={key} value={key}>
-                {SORTS[key].label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-3 size-4 text-slate-400" />
-        </label>
+        <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+          {/* Filtro por Origem (Fase 4A) */}
+          <label className="relative inline-flex items-center">
+            <span className="sr-only">Filtrar por origem</span>
+            <Filter className="pointer-events-none absolute left-3 size-4 text-slate-500" />
+            <select
+              id="filtro-origem-leads"
+              value={origemFiltro}
+              onChange={(e) => setOrigemFiltro(e.target.value)}
+              className="h-10 cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-sm font-semibold text-slate-700 outline-none transition hover:border-slate-300 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+            >
+              <option value="todas">Todas as origens</option>
+              {origensDisponiveis.map((origem) => (
+                <option key={origem} value={origem}>
+                  {origem}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 size-4 text-slate-400" />
+          </label>
+
+          {/* Ordenação */}
+          <label className="relative inline-flex items-center">
+            <span className="sr-only">Ordenar</span>
+            <ArrowDownWideNarrow className="pointer-events-none absolute left-3 size-4 text-slate-500" />
+            <select
+              id="ordenacao-leads"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              className="h-10 cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-sm font-semibold text-slate-700 outline-none transition hover:border-slate-300 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+            >
+              {(Object.keys(SORTS) as SortKey[]).map((key) => (
+                <option key={key} value={key}>
+                  {SORTS[key].label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 size-4 text-slate-400" />
+          </label>
+        </div>
       </div>
 
       <section

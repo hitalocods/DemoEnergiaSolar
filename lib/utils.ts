@@ -49,6 +49,12 @@ export function whatsappUrl(phone: string, name?: string) {
   return `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
 }
 
+/** Oculta o trecho "ref: XXXXXX" ou "(ref: XXXXXX)" para exibição no chat */
+export function stripRefCode(text: string): string {
+  if (!text) return "";
+  return text.replace(/\s*\(?ref:\s*[A-Za-z0-9]{6,8}\)?/gi, "").trim();
+}
+
 export const yesNo = (value: boolean | null, yes = "Sim", no = "Não") =>
   value === null ? "Não informado" : value ? yes : no;
 

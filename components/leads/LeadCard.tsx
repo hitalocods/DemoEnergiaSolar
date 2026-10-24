@@ -78,7 +78,7 @@ export function LeadCard({
             {lead.city}-{lead.state}
           </p>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
           {lead.demo && (
             <span className="inline-flex items-center rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-bold text-purple-700 ring-1 ring-inset ring-purple-600/20">
               DEMO
@@ -113,6 +113,24 @@ export function LeadCard({
           {lead.lastMessage}
         </p>
       )}
+
+      {/* Origem e Campanha do lead */}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-1.5 rounded-lg border border-slate-100 bg-slate-50/70 p-2 text-[11px]">
+        <div className="flex items-center gap-1 text-slate-600">
+          <span className="font-medium text-slate-400">Origem:</span>
+          <span className="font-bold text-slate-900">{lead.adSource || "Direto"}</span>
+        </div>
+        {lead.campanhaUtm ? (
+          <div className="flex items-center gap-1 text-blue-700">
+            <span className="font-medium text-blue-500">Campanha:</span>
+            <span className="max-w-[140px] truncate font-semibold" title={lead.campanhaUtm}>
+              {lead.campanhaUtm}
+            </span>
+          </div>
+        ) : (
+          <span className="text-[10px] text-slate-400">Orgânico / Sem UTM</span>
+        )}
+      </div>
 
       <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold">
         {isHuman ? (
