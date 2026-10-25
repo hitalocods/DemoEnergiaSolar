@@ -16,7 +16,7 @@ export function Sidebar({
   user?: SessionUser | null;
   pendingCount?: number;
 }) {
-  const displayName = user?.nome || "Rafael Nunes";
+  const displayName = user?.nome || "Samuel";
   const displayRole = user?.cargo || "Consultor comercial";
 
   return (

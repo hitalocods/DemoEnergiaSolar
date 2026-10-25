@@ -39,25 +39,32 @@ export async function loginAction(
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
 
-  if (!email || !password) {
-    return { error: "Informe e-mail e senha." };
+  if (!password) {
+    return { error: "Informe sua senha de acesso." };
   }
 
-  const userRows = await db
-    .select()
-    .from(usuarios)
-    .where(eq(usuarios.email, email))
-    .limit(1);
-
-  if (userRows.length === 0) {
-    return { error: "E-mail ou senha incorretos." };
+  let user: typeof usuarios.$inferSelect | undefined;
+  if (email) {
+    const userRows = await db
+      .select()
+      .from(usuarios)
+      .where(eq(usuarios.email, email))
+      .limit(1);
+    user = userRows[0];
+  } else {
+    // Se o email não for informado, usa o usuário padrão da empresa (Samuel)
+    const userRows = await db.select().from(usuarios).limit(1);
+    user = userRows[0];
   }
 
-  const user = userRows[0];
+  if (!user) {
+    return { error: "Usuário não encontrado." };
+  }
+
   const valid = await comparePassword(password, user.senhaHash);
 
   if (!valid) {
-    return { error: "E-mail ou senha incorretos." };
+    return { error: "Senha incorreta. Tente novamente." };
   }
 
   await createSessionCookie({

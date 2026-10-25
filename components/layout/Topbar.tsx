@@ -9,7 +9,7 @@ import { NavLinksView } from "./NavLinksView";
 
 /** Barra superior: compacta e escura no mobile, clara com busca no desktop. */
 export function Topbar({ user }: { user?: SessionUser | null }) {
-  const displayName = user?.nome || "Rafael Nunes";
+  const displayName = user?.nome || "Samuel";
 
   return (
     <header className="sticky top-0 z-20">

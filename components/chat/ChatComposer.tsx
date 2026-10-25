@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 
 const QUICK_REPLIES = [
-  "Oi! Aqui é o Rafael, consultor da EBS Energia Solar 😊",
+  "Oi! Aqui é o Samuel, consultor da EBS Energia Solar 😊",
   "Posso te ligar agora para explicar a proposta?",
   "Vou preparar sua simulação e te mando ainda hoje.",
 ];

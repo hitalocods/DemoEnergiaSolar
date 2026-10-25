@@ -20,12 +20,24 @@ import {
   Sparkles,
   Tag,
   Target,
+  TrendingUp,
   Wallet,
   X,
 } from "lucide-react";
-import { marcarLeadContatadoAction, salvarNotasLeadAction } from "@/app/actions";
-import type { Lead } from "@/lib/types";
-import { cn, formatCurrency, formatPhone, STAGE_META, yesNo } from "@/lib/utils";
+import {
+  marcarLeadContatadoAction,
+  salvarNotasLeadAction,
+  updateLeadStageAction,
+} from "@/app/actions";
+import type { FunnelStageId, Lead } from "@/lib/types";
+import {
+  cn,
+  formatCurrency,
+  formatPhone,
+  STAGE_META,
+  STAGE_ORDER,
+  yesNo,
+} from "@/lib/utils";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -44,6 +56,22 @@ export function LeadProfile({ lead, onClose, onLeadUpdate }: LeadProfileProps) {
   const [salvandoNotas, setSalvandoNotas] = useState(false);
   const [notaSalvaFeedback, setNotaSalvaFeedback] = useState(false);
   const [contatando, setContatando] = useState(false);
+  const [mudandoEtapa, setMudandoEtapa] = useState(false);
+
+  async function handleMudarEtapa(nextStage: FunnelStageId) {
+    if (currentLead.stage === nextStage) return;
+    setMudandoEtapa(true);
+    try {
+      const updated = await updateLeadStageAction(currentLead.id, nextStage);
+      setCurrentLead(updated);
+      if (onLeadUpdate) onLeadUpdate(updated);
+      router.refresh();
+    } catch (err) {
+      console.error("Erro ao alterar etapa do funil:", err);
+    } finally {
+      setMudandoEtapa(false);
+    }
+  }
 
   // Economia estimada (~80% da conta ou valor salvo)
   const savings = currentLead.economiaEstimada
@@ -227,6 +255,51 @@ export function LeadProfile({ lead, onClose, onLeadUpdate }: LeadProfileProps) {
               )}
               Salvar notas
             </Button>
+          </div>
+        </div>
+
+        {/* Bloco de Etapa no Funil de Vendas */}
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+              <TrendingUp className="size-3.5 text-blue-600" />
+              Etapa no Funil de Vendas
+            </span>
+            {mudandoEtapa && (
+              <Loader2 className="size-3.5 animate-spin text-blue-600" />
+            )}
+          </div>
+          <p className="mt-0.5 text-[11px] text-slate-400">
+            Mova o lead entre as colunas do Painel de Vendas.
+          </p>
+
+          <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+            {STAGE_ORDER.map((stage) => {
+              const meta = STAGE_META[stage];
+              const isSelected = currentLead.stage === stage;
+              return (
+                <button
+                  key={stage}
+                  type="button"
+                  onClick={() => handleMudarEtapa(stage)}
+                  disabled={mudandoEtapa}
+                  className={cn(
+                    "flex items-center justify-center gap-1.5 rounded-lg py-1.5 px-2 text-xs font-semibold transition border cursor-pointer",
+                    isSelected
+                      ? cn(meta.soft, meta.text, "border-current shadow-xs ring-1 ring-current/20 font-bold")
+                      : "border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "size-1.5 rounded-full shrink-0",
+                      isSelected ? meta.accent : "bg-slate-300"
+                    )}
+                  />
+                  {meta.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 

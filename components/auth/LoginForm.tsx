@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/Button";
 
 /** Login real com email e senha validados no Neon Postgres */
 export function LoginForm() {
-  const [email, setEmail] = useState("rafael@solarmais.com.br");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -63,34 +62,14 @@ export function LoginForm() {
       )}
 
       <div className="mt-8 space-y-4">
-        <Field label="E-mail" icon={<Mail className="size-4" />}>
-          <input
-            id="login-email"
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="peer h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
-          />
-        </Field>
-
-        <Field
-          label="Senha"
-          icon={<Lock className="size-4" />}
-          trailing={
-            <a className="text-xs font-semibold text-brand hover:underline" href="#">
-              Esqueci a senha
-            </a>
-          }
-        >
+        <Field label="Senha de acesso" icon={<Lock className="size-4" />}>
           <input
             id="login-senha"
             name="password"
             type={showPassword ? "text" : "password"}
             required
             autoComplete="current-password"
+            placeholder="Digite sua senha de acesso"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-12 text-sm outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
@@ -122,7 +101,7 @@ export function LoginForm() {
       </Button>
 
       <p className="mt-6 text-center text-xs text-slate-400">
-        Digite o e-mail e senha cadastrados para acessar o painel.
+        Digite sua senha cadastrada para acessar o painel da EBS Energia Solar.
       </p>
     </form>
   );

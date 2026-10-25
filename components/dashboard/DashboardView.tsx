@@ -21,7 +21,7 @@ interface DashboardViewProps {
 export function DashboardView({
   initialMetrics = null,
   initialLeads = [],
-  userName = "Rafael",
+  userName = "Samuel",
 }: DashboardViewProps) {
   const [period, setPeriod] = useState<PeriodKey>("30d");
   const [metrics, setMetrics] = useState<Metrics | null>(initialMetrics);

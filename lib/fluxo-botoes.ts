@@ -104,7 +104,7 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
 
     const msgFinal =
       "Excelente! Suas informações foram registradas com sucesso ✅\n\n" +
-      "Nossa equipe de consultores da SolarMais já recebeu sua simulação e vai continuar seu atendimento aqui em instantes com a sua proposta personalizada!";
+      "Nossa equipe de consultores da EBS Energia Solar já recebeu sua simulação e vai continuar seu atendimento aqui em instantes com a sua proposta personalizada!";
 
     const waId = await sendText(telefone, msgFinal);
 
@@ -392,7 +392,7 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
   // BOAS-VINDAS INICIAL (Se acabou de chegar ou mensagem genérica de início)
   // =========================================================================
   const msgBoasVindas =
-    "Olá! Seja muito bem-vindo à SolarMais ☀️.\n\n" +
+    "Olá! Seja muito bem-vindo à EBS Energia Solar ☀️.\n\n" +
     "Para iniciarmos sua simulação rápida e personalizada, por onde você conheceu nossa empresa?";
 
   const waId = await sendInteractiveButtons(

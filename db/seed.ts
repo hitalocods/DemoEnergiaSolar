@@ -38,10 +38,10 @@ async function runSeed() {
 
   // 2. Cria empresa padrão
   const EMPRESA_ID = "empresa_solarmais_1";
-  console.log("Criando empresa SolarMais...");
+  console.log("Criando empresa EBS Energia Solar...");
   await db.insert(empresas).values({
     id: EMPRESA_ID,
-    nome: "SolarMais",
+    nome: "EBS Energia Solar",
     criadoEm: new Date(),
   });
 
@@ -61,7 +61,7 @@ async function runSeed() {
   await db.insert(usuarios).values({
     id: USUARIO_ID,
     empresaId: EMPRESA_ID,
-    nome: "Rafael Nunes",
+    nome: "Samuel",
     email: seedEmail,
     senhaHash,
     cargo: "Consultor comercial",
