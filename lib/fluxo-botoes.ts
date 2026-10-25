@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { leads, mensagens } from "@/db/schema";
+import { leads, mensagens, oportunidades } from "@/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { sendInteractiveButtons, sendText } from "@/lib/whatsapp";
 import type { OrigemTipo } from "@/lib/types";
@@ -82,6 +82,25 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
         atualizadoEm: new Date(),
       })
       .where(eq(leads.id, leadId));
+
+    // Insere automaticamente no funil de vendas (etapa "proposta")
+    const valorSistema = Number(lead.contaMedia || "650") * 25;
+    const opExistente = await db
+      .select({ id: oportunidades.id })
+      .from(oportunidades)
+      .where(eq(oportunidades.leadId, leadId))
+      .limit(1);
+
+    if (opExistente.length === 0) {
+      await db.insert(oportunidades).values({
+        id: `op_${leadId}`,
+        empresaId,
+        leadId,
+        etapa: "proposta",
+        valorProposta: valorSistema.toFixed(2),
+        atualizadoEm: new Date(),
+      });
+    }
 
     const msgFinal =
       "Excelente! Suas informações foram registradas com sucesso ✅\n\n" +
