@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { leads, mensagens, oportunidades } from "@/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { sendInteractiveButtons, sendText } from "@/lib/whatsapp";
+import { getSystemConfig } from "@/lib/config-helper";
 import type { OrigemTipo } from "@/lib/types";
 
 type TipoImovelDB = "residencial" | "comercial" | "rural";
@@ -32,8 +33,11 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
   if (leadRows.length === 0) return false;
   const lead = leadRows[0];
 
-  // Se já foi transferido para atendimento humano e não é um clique explícito de botão do fluxo, não interfere
+  const cfg = await getSystemConfig();
+
+  // Se já foi transferido para atendimento humano e a configuração de pausar estiver ativa
   if (
+    cfg.pausarIaQuandoHumano &&
     lead.atendimento === "humano" &&
     !botaoId?.startsWith("origem_") &&
     !botaoId?.startsWith("imovel_") &&
@@ -83,8 +87,8 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
       })
       .where(eq(leads.id, leadId));
 
-    // Insere automaticamente no funil de vendas (etapa "proposta")
-    const valorSistema = Number(lead.contaMedia || "650") * 25;
+    // Insere automaticamente no funil de vendas (etapa "proposta") com o multiplicador configurado
+    const valorSistema = Number(lead.contaMedia || "650") * cfg.multiplicadorProposta;
     const opExistente = await db
       .select({ id: oportunidades.id })
       .from(oportunidades)
@@ -102,9 +106,7 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
       });
     }
 
-    const msgFinal =
-      "Excelente! Suas informações foram registradas com sucesso ✅\n\n" +
-      "Nossa equipe de consultores da EBS Energia Solar já recebeu sua simulação e vai continuar seu atendimento aqui em instantes com a sua proposta personalizada!";
+    const msgFinal = cfg.msgConclusao;
 
     const waId = await sendText(telefone, msgFinal);
 
@@ -135,21 +137,23 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
     let valorConta = 650;
     let economia = 580;
 
+    const fatorEco = (cfg.percentualEconomia || 92) / 100;
+
     if (idAcao === "conta_ate_400" || textoUpper.includes("ATÉ R$ 400") || textoUpper.includes("ATE R$ 400")) {
       valorConta = 350;
-      economia = 300;
+      economia = Math.round(valorConta * fatorEco);
     } else if (idAcao === "conta_400_1000" || textoUpper.includes("400 A R$ 1.000")) {
       valorConta = 750;
-      economia = 680;
+      economia = Math.round(valorConta * fatorEco);
     } else if (idAcao === "conta_acima_1000" || textoUpper.includes("ACIMA DE R$ 1.000")) {
       valorConta = 1500;
-      economia = 1380;
+      economia = Math.round(valorConta * fatorEco);
     } else {
       // Se digitou número livre (ex: "700", "850 reais", "R$ 500,00")
       const numMatch = texto.replace(/\./g, "").replace(",", ".").match(/\d+(\.\d+)?/);
       if (numMatch) {
         valorConta = parseFloat(numMatch[0]) || 650;
-        economia = Math.round(valorConta * 0.9);
+        economia = Math.round(valorConta * fatorEco);
       }
     }
 
@@ -391,9 +395,7 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
   // =========================================================================
   // BOAS-VINDAS INICIAL (Se acabou de chegar ou mensagem genérica de início)
   // =========================================================================
-  const msgBoasVindas =
-    "Olá! Seja muito bem-vindo à EBS Energia Solar ☀️.\n\n" +
-    "Para iniciarmos sua simulação rápida e personalizada, por onde você conheceu nossa empresa?";
+  const msgBoasVindas = cfg.msgBoasVindas;
 
   const waId = await sendInteractiveButtons(
     telefone,

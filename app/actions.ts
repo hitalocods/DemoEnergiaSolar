@@ -439,3 +439,108 @@ export async function getRelatorioOrigemAction(period: PeriodKey = "30d") {
   return await getLeadsPorOrigem(period);
 }
 
+/** Obtém as configurações atuais do sistema para o painel */
+export async function getConfiguracoesSistemaAction() {
+  const { getSystemConfig } = await import("@/lib/config-helper");
+  return await getSystemConfig();
+}
+
+/** Salva as configurações editadas no painel visual */
+export async function salvarConfiguracoesSistemaAction(formData: FormData): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const { configuracoesSistema, empresas, usuarios } = await import("@/db/schema");
+    const { invalidarCacheConfig } = await import("@/lib/config-helper");
+
+    const nomeEmpresa =
+      (formData.get("nomeEmpresa") as string)?.trim() || "EBS Energia Solar";
+    const nomeConsultor =
+      (formData.get("nomeConsultor") as string)?.trim() || "Samuel";
+    const msgBoasVindas = (formData.get("msgBoasVindas") as string)?.trim() || "";
+    const msgConclusao = (formData.get("msgConclusao") as string)?.trim() || "";
+    const percentualEconomia =
+      (formData.get("percentualEconomia") as string)?.trim() || "92.00";
+    const multiplicadorProposta =
+      (formData.get("multiplicadorProposta") as string)?.trim() || "25.00";
+    const valorMinimoLeadQuente =
+      (formData.get("valorMinimoLeadQuente") as string)?.trim() || "300.00";
+    const telefoneNotificacao =
+      (formData.get("telefoneNotificacao") as string)?.trim() || "558688269144";
+
+    const iaAtiva24h = formData.get("iaAtiva24h") === "on";
+    const pedirFotoConta = formData.get("pedirFotoConta") === "on";
+    const notificarLeadQuente = formData.get("notificarLeadQuente") === "on";
+    const pausarIaQuandoHumano = formData.get("pausarIaQuandoHumano") === "on";
+
+    const existe = await db.select().from(configuracoesSistema).limit(1);
+
+    if (existe.length > 0) {
+      await db
+        .update(configuracoesSistema)
+        .set({
+          nomeEmpresa,
+          nomeConsultor,
+          msgBoasVindas,
+          msgConclusao,
+          percentualEconomia,
+          multiplicadorProposta,
+          valorMinimoLeadQuente,
+          iaAtiva24h,
+          pedirFotoConta,
+          notificarLeadQuente,
+          pausarIaQuandoHumano,
+          telefoneNotificacao,
+          atualizadoEm: new Date(),
+        })
+        .where(eq(configuracoesSistema.id, existe[0].id));
+    } else {
+      await db.insert(configuracoesSistema).values({
+        id: "config_padrao",
+        empresaId: "empresa_solarmais_1",
+        nomeEmpresa,
+        nomeConsultor,
+        msgBoasVindas,
+        msgConclusao,
+        percentualEconomia,
+        multiplicadorProposta,
+        valorMinimoLeadQuente,
+        iaAtiva24h,
+        pedirFotoConta,
+        notificarLeadQuente,
+        pausarIaQuandoHumano,
+        telefoneNotificacao,
+        atualizadoEm: new Date(),
+      });
+    }
+
+    // Sincroniza tabelas centrais de empresa e usuário
+    await db
+      .update(empresas)
+      .set({ nome: nomeEmpresa })
+      .where(eq(empresas.id, "empresa_solarmais_1"));
+
+    await db
+      .update(usuarios)
+      .set({ nome: nomeConsultor })
+      .where(eq(usuarios.id, "user_rafael_1"));
+
+    invalidarCacheConfig();
+
+    revalidatePath("/configuracoes");
+    revalidatePath("/leads");
+    revalidatePath("/vendas");
+    revalidatePath("/chat");
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("Erro ao salvar configurações:", err);
+    return {
+      success: false,
+      error: err.message || "Erro ao salvar alterações no banco de dados.",
+    };
+  }
+}
+
+

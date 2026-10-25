@@ -258,6 +258,52 @@ export const cliquesOrigem = pgTable(
   ]
 );
 
+// 9. Configurações Globais do Sistema e Automações
+export const configuracoesSistema = pgTable("configuracoes_sistema", {
+  id: text("id").primaryKey().default("config_padrao"),
+  empresaId: text("empresa_id")
+    .notNull()
+    .references(() => empresas.id, { onDelete: "cascade" }),
+  nomeEmpresa: text("nome_empresa").notNull().default("EBS Energia Solar"),
+  nomeConsultor: text("nome_consultor").notNull().default("Samuel"),
+  msgBoasVindas: text("msg_boas_vindas")
+    .notNull()
+    .default(
+      "Olá! Seja muito bem-vindo à EBS Energia Solar ☀️.\n\nPara iniciarmos sua simulação rápida e personalizada, por onde você conheceu nossa empresa?"
+    ),
+  msgConclusao: text("msg_conclusao")
+    .notNull()
+    .default(
+      "Excelente! Suas informações foram registradas com sucesso ✅\n\nNossa equipe de consultores da EBS Energia Solar já recebeu sua simulação e vai continuar seu atendimento aqui em instantes com a sua proposta personalizada!"
+    ),
+  percentualEconomia: numeric("percentual_economia", {
+    precision: 5,
+    scale: 2,
+  })
+    .notNull()
+    .default("92.00"),
+  multiplicadorProposta: numeric("multiplicador_proposta", {
+    precision: 5,
+    scale: 2,
+  })
+    .notNull()
+    .default("25.00"),
+  valorMinimoLeadQuente: numeric("valor_minimo_lead_quente", {
+    precision: 10,
+    scale: 2,
+  })
+    .notNull()
+    .default("300.00"),
+  iaAtiva24h: boolean("ia_ativa_24h").notNull().default(true),
+  pedirFotoConta: boolean("pedir_foto_conta").notNull().default(true),
+  notificarLeadQuente: boolean("notificar_lead_quente").notNull().default(true),
+  pausarIaQuandoHumano: boolean("pausar_ia_quando_humano").notNull().default(true),
+  telefoneNotificacao: text("telefone_notificacao").default("558688269144"),
+  atualizadoEm: timestamp("atualizado_em", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 // Relacionamentos Drizzle
 export const empresasRelations = relations(empresas, ({ many }) => ({
   usuarios: many(usuarios),
