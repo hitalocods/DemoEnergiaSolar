@@ -138,6 +138,18 @@ interface MetaWebhookMessage {
   context?: {
     id: string; // wamid da mensagem respondida
   };
+  referral?: {
+    source_url?: string;
+    source_id?: string;
+    source_type?: string;
+    headline?: string;
+    body?: string;
+    media_type?: string;
+    image_url?: string;
+    video_url?: string;
+    thumbnail_url?: string;
+    ctwa_clid?: string;
+  };
 }
 
 interface MetaWebhookStatus {
@@ -316,6 +328,7 @@ async function processWebhookPayload(
           messageDate,
           waMessageId: message.id,
           eventoId,
+          referral: message.referral,
         });
       }
     }

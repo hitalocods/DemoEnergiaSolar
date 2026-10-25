@@ -19,7 +19,12 @@ export interface ProcessarMensagemOptions {
   origem?: string;
   anuncioId?: string | null;
   campanha?: string | null;
-  referral?: { source_id?: string; headline?: string } | null;
+  referral?: {
+    source_id?: string;
+    headline?: string;
+    source_url?: string;
+    ctwa_clid?: string;
+  } | null;
   isDemo?: boolean;
   eventoId?: string;
 }
@@ -57,18 +62,22 @@ export async function processarMensagemInbound(options: ProcessarMensagemOptions
 
     // IDENTIFICAÇÃO DE ORIGEM (só na PRIMEIRA mensagem de um lead novo)
     let origemTipo: OrigemTipo = "direto";
-    let origemNome = options.origem || (isDemo ? "Demo" : "WhatsApp direto");
+    let origemNome = options.origem || (isDemo ? "Demo" : "Direto/Landing");
     let anuncioId = options.anuncioId || null;
     let campanha = options.campanha || null;
     let campanhaUtm: string | null = null;
     let gclid: string | null = null;
+    let fbclid: string | null = null;
+    let referrer: string | null = null;
 
-    // 1. Se message.referral existir: origem_tipo "meta_ads", anuncio_id = source_id, campanha = headline
+    // 1. Se message.referral existir: Click-to-WhatsApp Ads da Meta
     if (options.referral) {
       origemTipo = "meta_ads";
       anuncioId = options.referral.source_id || anuncioId;
       campanha = options.referral.headline || campanha;
-      origemNome = "Anúncio Meta";
+      origemNome = "Meta (anúncio)";
+      fbclid = options.referral.ctwa_clid || null;
+      referrer = options.referral.source_url || null;
     } else {
       // 2. Senão, procure na mensagem o padrão "ref: XXXXXX" (6 a 8 caracteres A-Z0-9, sem diferenciar maiúscula)
       const textoMensagem = options.texto || "";
@@ -144,7 +153,7 @@ export async function processarMensagemInbound(options: ProcessarMensagemOptions
           }
         }
       }
-      // 3. Senão: origem_tipo "direto", origem "WhatsApp direto" (já inicializados)
+      // 3. Senão: origem_tipo "direto", origem "Direto/Landing" (já inicializados)
     }
 
     await db.insert(leads).values({
@@ -161,6 +170,8 @@ export async function processarMensagemInbound(options: ProcessarMensagemOptions
       origemTipo,
       campanhaUtm,
       gclid,
+      fbclid,
+      referrer,
       anuncioId,
       campanha,
       demo: isDemo,
@@ -172,13 +183,23 @@ export async function processarMensagemInbound(options: ProcessarMensagemOptions
   } else {
     leadId = leadRows[0].id;
     atendimentoModo = leadRows[0].atendimento;
-    await db
-      .update(leads)
-      .set({
-        atualizadoEm: new Date(),
-        ultimaMsgLeadEm: messageDate,
-      })
-      .where(eq(leads.id, leadId));
+
+    const updates: Partial<typeof leads.$inferInsert> = {
+      atualizadoEm: new Date(),
+      ultimaMsgLeadEm: messageDate,
+    };
+
+    // Se o lead existente interagiu via anúncio Click-to-WhatsApp, salva o anúncio
+    if (options.referral && !leadRows[0].anuncioId) {
+      updates.origem = "Meta (anúncio)";
+      updates.origemTipo = "meta_ads";
+      updates.anuncioId = options.referral.source_id;
+      updates.campanha = options.referral.headline;
+      if (options.referral.ctwa_clid) updates.fbclid = options.referral.ctwa_clid;
+      if (options.referral.source_url) updates.referrer = options.referral.source_url;
+    }
+
+    await db.update(leads).set(updates).where(eq(leads.id, leadId));
   }
 
   // 3. Verificar deduplicação se houver waMessageId
