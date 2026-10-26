@@ -21,7 +21,7 @@ export function NavLinksView({
 
   if (variant === "bottom") {
     return (
-      <ul className="grid grid-cols-6">
+      <ul className="grid grid-cols-7">
         {NAV_ITEMS.map(({ href, short, icon: Icon }) => {
           const active = isActive(href);
           return (

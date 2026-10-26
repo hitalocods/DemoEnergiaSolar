@@ -167,7 +167,7 @@ export function LeadCard({
         </ButtonLink>
         {isHuman ? (
           <ButtonLink
-            href={`/leads/${lead.id}`}
+            href={`/conversas?leadId=${lead.id}`}
             variant="secondary"
             size="sm"
             className="text-brand"

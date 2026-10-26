@@ -17,7 +17,7 @@ export function NavLinks({
     <NavLinksView
       variant={variant}
       pathname={pathname}
-      badges={{ "/leads": pendingCount }}
+      badges={{ "/leads": pendingCount, "/conversas": pendingCount }}
     />
   );
 }

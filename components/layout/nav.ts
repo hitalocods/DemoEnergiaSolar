@@ -1,4 +1,4 @@
-import { BarChart3, KanbanSquare, LayoutDashboard, Settings, Smartphone, Users, type LucideIcon } from "lucide-react";
+import { BarChart3, KanbanSquare, LayoutDashboard, MessageSquare, Settings, Smartphone, Users, type LucideIcon } from "lucide-react";
 
 export interface NavItem {
   href: string;
@@ -9,6 +9,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", short: "Início", icon: LayoutDashboard },
+  { href: "/conversas", label: "Conversas", short: "Chat", icon: MessageSquare },
   { href: "/leads", label: "Leads", short: "Leads", icon: Users },
   { href: "/vendas", label: "Vendas", short: "Vendas", icon: KanbanSquare },
   { href: "/relatorios", label: "Relatórios", short: "Relatórios", icon: BarChart3 },
