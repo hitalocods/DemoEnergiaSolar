@@ -168,7 +168,7 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
 
     const msgFinanc =
       `Sua economia estimada é de aproximadamente R$ ${economia}/mês! 💰\n\n` +
-      "Você tem interesse em financiar sem entrada (trocando a conta de luz pela parcela) ou pagamento à vista?";
+      "[6/6] 💳 Você tem interesse em financiar sem entrada (trocando a conta de luz pela parcela) ou pagamento à vista?";
 
     const waId = await sendInteractiveButtons(
       telefone,
@@ -218,7 +218,7 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
       })
       .where(eq(leads.id, leadId));
 
-    const msgConta = "Entendido! Qual é o valor médio mensal da sua conta de energia atualmente?";
+    const msgConta = "Entendido! [5/6] ⚡ Qual é o valor médio mensal da sua conta de energia atualmente?";
 
     const waId = await sendInteractiveButtons(
       telefone,
@@ -270,7 +270,7 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
       })
       .where(eq(leads.id, leadId));
 
-    const msgProprio = "Ótimo! O imóvel onde será feita a instalação é próprio ou alugado?";
+    const msgProprio = "[4/6] 🔑 O imóvel onde será feita a instalação é próprio ou alugado?";
 
     const waId = await sendInteractiveButtons(
       telefone,
@@ -314,7 +314,7 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
       })
       .where(eq(leads.id, leadId));
 
-    const msgImovel = `Perfeito para ${cidadeFormatada}! 🏠\n\nO imóvel onde deseja instalar energia solar é:`;
+    const msgImovel = `Perfeito para ${cidadeFormatada}! 🏠\n\n[3/6] O imóvel onde deseja instalar energia solar é:`;
 
     const waId = await sendInteractiveButtons(
       telefone,
@@ -376,7 +376,7 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
       })
       .where(eq(leads.id, leadId));
 
-    const msgCidade = "Show de bola! 📍 Em qual cidade fica o imóvel onde você quer instalar energia solar?";
+    const msgCidade = "Show de bola! [2/6] 📍 Em qual cidade fica o imóvel onde você quer instalar energia solar? (Ex: Teresina, Timon, Parnaíba...)";
     const waId = await sendText(telefone, msgCidade);
 
     await db.insert(mensagens).values({
@@ -395,7 +395,10 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
   // =========================================================================
   // BOAS-VINDAS INICIAL (Se acabou de chegar ou mensagem genérica de início)
   // =========================================================================
-  const msgBoasVindas = cfg.msgBoasVindas;
+  const msgBoasVindas =
+    cfg.msgBoasVindas && cfg.msgBoasVindas.includes("[1/6]")
+      ? cfg.msgBoasVindas
+      : "Olá! Seja muito bem-vindo à EBS Energia Solar ☀️.\n\n[1/6] 📍 Para iniciarmos sua simulação rápida e personalizada, por onde você conheceu nossa empresa?";
 
   const waId = await sendInteractiveButtons(
     telefone,

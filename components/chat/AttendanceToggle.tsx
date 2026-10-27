@@ -12,12 +12,54 @@ export function AttendanceToggle({
   mode,
   busy,
   onChange,
+  compact = false,
 }: {
   mode: AttendanceMode;
   busy: boolean;
   onChange: (mode: AttendanceMode) => void;
+  compact?: boolean;
 }) {
   const human = mode === "humano";
+
+  if (compact) {
+    return (
+      <button
+        id="toggle-atendimento"
+        type="button"
+        role="switch"
+        aria-checked={human}
+        disabled={busy}
+        onClick={() => onChange(human ? "ia" : "humano")}
+        title={
+          human
+            ? "Atendimento humano ativo (clique para devolver à IA)"
+            : "IA atendendo (clique para assumir conversa)"
+        }
+        className={cn(
+          "inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-bold ring-1 ring-inset transition-all disabled:opacity-70",
+          human
+            ? "bg-emerald-50 text-emerald-800 ring-emerald-600/20 hover:bg-emerald-100"
+            : "bg-blue-50 text-blue-700 ring-blue-600/20 hover:bg-blue-100"
+        )}
+      >
+        {busy ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : human ? (
+          <>
+            <span className="size-2 rounded-full bg-emerald-500" />
+            <span className="hidden sm:inline">Humano ativo</span>
+            <span className="sm:hidden">Humano</span>
+          </>
+        ) : (
+          <>
+            <span className="size-2 rounded-full bg-blue-500 animate-pulse" />
+            <span className="hidden sm:inline">IA atendendo</span>
+            <span className="sm:hidden">IA</span>
+          </>
+        )}
+      </button>
+    );
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-2">

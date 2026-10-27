@@ -9,8 +9,11 @@ export const metadata: Metadata = {
 };
 
 export default async function ConfiguracoesPage() {
-  const whatsappNumero = process.env.WHATSAPP_NUMERO_PUBLICO || "558688269144";
   const config = await getSystemConfig();
+  const whatsappNumero =
+    process.env.WHATSAPP_NUMERO_PUBLICO ||
+    config.telefoneNotificacao ||
+    "558688269144";
 
   return (
     <div className="space-y-8">

@@ -24,7 +24,7 @@ const DEFAULT_CONFIG: SystemConfig = {
   nomeEmpresa: "EBS Energia Solar",
   nomeConsultor: "Samuel",
   msgBoasVindas:
-    "Olá! Seja muito bem-vindo à EBS Energia Solar ☀️.\n\nPara iniciarmos sua simulação rápida e personalizada, por onde você conheceu nossa empresa?",
+    "Olá! Seja muito bem-vindo à EBS Energia Solar ☀️.\n\n[1/6] 📍 Para iniciarmos sua simulação rápida e personalizada, por onde você conheceu nossa empresa?",
   msgConclusao:
     "Excelente! Suas informações foram registradas com sucesso ✅\n\nNossa equipe de consultores da EBS Energia Solar já recebeu sua simulação e vai continuar seu atendimento aqui em instantes com a sua proposta personalizada!",
   percentualEconomia: 92,

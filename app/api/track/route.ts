@@ -142,9 +142,13 @@ export async function POST(request: Request) {
       usadoEm: null,
     });
 
-    // Montar URL do WhatsApp
+    // Montar URL do WhatsApp dinamicamente
+    const { getSystemConfig } = await import("@/lib/config-helper");
+    const cfg = await getSystemConfig();
     const numeroPublico = (
-      process.env.WHATSAPP_NUMERO_PUBLICO || "5586994127788"
+      process.env.WHATSAPP_NUMERO_PUBLICO ||
+      cfg.telefoneNotificacao ||
+      "558688269144"
     ).replace(/\D/g, "");
 
     const mensagemBase =

@@ -59,13 +59,25 @@ export function ConversasView({
 
   const [leadsList, setLeadsList] = useState<Lead[]>(initialLeads);
   const [selectedId, setSelectedId] = useState<string | null>(
-    initialLeadId || (initialLeads.length > 0 ? initialLeads[0].id : null)
+    initialLeadId || null
   );
   const [busca, setBusca] = useState("");
   const [tab, setTab] = useState<FilterTab>("todas");
   const [profileOpen, setProfileOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // No desktop (>= 768px), se nenhuma conversa estiver aberta, seleciona a primeira por padrão
+  useEffect(() => {
+    if (
+      !selectedId &&
+      initialLeads.length > 0 &&
+      typeof window !== "undefined" &&
+      window.innerWidth >= 768
+    ) {
+      setSelectedId(initialLeads[0].id);
+    }
+  }, [initialLeads, selectedId]);
 
   // Lead selecionado atual
   const selectedLead = useMemo(
@@ -177,7 +189,7 @@ export function ConversasView({
   const isHuman = selectedLead?.attendance === "humano";
 
   return (
-    <div className="flex h-[calc(100dvh-5.5rem)] min-h-[560px] w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-soft">
+    <div className="flex h-[calc(100dvh-11rem)] sm:h-[calc(100dvh-9.5rem)] lg:h-[calc(100dvh-7.5rem)] min-h-0 w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-soft">
       {/* =========================================================================
           COLUNA DA ESQUERDA: LISTA DE CONVERSAS (WHATSAPP STYLE)
          ========================================================================= */}
@@ -382,43 +394,44 @@ export function ConversasView({
         {selectedLead ? (
           <>
             {/* Header da Conversa Ativa */}
-            <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200/80 bg-white px-4 shadow-xs">
-              <div className="flex min-w-0 items-center gap-3">
+            <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200/80 bg-white px-2.5 sm:px-4 shadow-xs">
+              <div className="flex min-w-0 items-center gap-2">
                 {/* Botão voltar no mobile */}
                 <button
                   onClick={() => setSelectedId(null)}
-                  className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 md:hidden"
+                  className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 md:hidden"
                   aria-label="Voltar para a lista de conversas"
                 >
                   <ArrowLeft className="size-5" />
                 </button>
 
-                <Avatar name={selectedLead.name} size="md" />
+                <Avatar name={selectedLead.name} size="sm" />
 
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="truncate font-display text-sm font-bold text-slate-900 sm:text-base">
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="truncate font-display text-xs font-bold text-slate-900 sm:text-sm">
                       {selectedLead.name}
                     </h3>
                     {selectedLead.status === "quente" && (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20">
-                        <Flame className="size-3 text-amber-600" />
+                      <span className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-amber-50 px-1 py-0.2 text-[9px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                        <Flame className="size-2.5 text-amber-600" />
                         Quente
                       </span>
                     )}
                   </div>
-                  <p className="truncate text-xs text-slate-500 font-mono">
-                    {formatPhone(selectedLead.phone)} · {selectedLead.city}
+                  <p className="truncate text-[10px] text-slate-500 font-mono sm:text-xs">
+                    {formatPhone(selectedLead.phone)} {selectedLead.city ? `· ${selectedLead.city}` : ""}
                   </p>
                 </div>
               </div>
 
               {/* Ações do Header */}
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-1 sm:gap-2">
                 <AttendanceToggle
                   mode={selectedLead.attendance}
                   busy={busy}
                   onChange={changeMode}
+                  compact
                 />
 
                 <ButtonLink
@@ -426,10 +439,11 @@ export function ConversasView({
                   external
                   variant="whatsapp"
                   size="sm"
-                  className="hidden sm:inline-flex"
+                  className="px-2 py-1.5 text-xs sm:px-3"
+                  title="Abrir no aplicativo do WhatsApp"
                 >
                   <MessageCircle className="size-3.5" />
-                  Abrir no WhatsApp
+                  <span className="hidden lg:inline">WhatsApp</span>
                 </ButtonLink>
 
                 <button
@@ -437,7 +451,7 @@ export function ConversasView({
                   aria-label="Alternar perfil do lead"
                   title="Resumo do Lead"
                   className={cn(
-                    "rounded-xl p-2 transition ring-1 ring-inset",
+                    "rounded-xl p-1.5 sm:p-2 transition ring-1 ring-inset",
                     profileOpen
                       ? "bg-blue-50 text-blue-700 ring-blue-200"
                       : "text-slate-500 ring-slate-200 hover:bg-slate-100"
@@ -453,10 +467,10 @@ export function ConversasView({
             </header>
 
             {/* Área de Mensagens com Chat Wallpaper */}
-            <div className="flex flex-1 overflow-hidden">
+            <div className="relative flex flex-1 overflow-hidden">
               <div
                 ref={scrollRef}
-                className="chat-wallpaper scrollbar-thin flex-1 space-y-3 overflow-y-auto p-4 sm:p-5"
+                className="chat-wallpaper scrollbar-thin flex-1 space-y-3 overflow-y-auto p-3 sm:p-5"
               >
                 {messages.length === 0 ? (
                   <div className="mx-auto my-12 max-w-sm rounded-2xl border border-dashed border-slate-200 bg-white/80 p-6 text-center backdrop-blur">
@@ -490,9 +504,35 @@ export function ConversasView({
                 )}
               </div>
 
-              {/* Coluna Direita (Retrátil): Painel de Detalhes do Lead */}
+              {/* Drawer de Detalhes no Mobile */}
               {profileOpen && (
-                <aside className="w-80 shrink-0 border-l border-slate-200/80 bg-white overflow-y-auto">
+                <div
+                  className="fixed inset-0 z-50 md:hidden"
+                  role="dialog"
+                  aria-modal="true"
+                >
+                  <button
+                    onClick={() => setProfileOpen(false)}
+                    className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs"
+                    aria-label="Fechar perfil"
+                  />
+                  <div className="absolute inset-y-0 right-0 w-full max-w-xs bg-white shadow-2xl overflow-y-auto">
+                    <LeadProfile
+                      lead={selectedLead}
+                      onClose={() => setProfileOpen(false)}
+                      onLeadUpdate={(up) => {
+                        setLeadsList((prev) =>
+                          prev.map((l) => (l.id === up.id ? up : l))
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Coluna Direita (Retrátil) no Desktop */}
+              {profileOpen && (
+                <aside className="hidden md:block w-80 shrink-0 border-l border-slate-200/80 bg-white overflow-y-auto">
                   <LeadProfile
                     lead={selectedLead}
                     onClose={() => setProfileOpen(false)}
