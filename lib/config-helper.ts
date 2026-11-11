@@ -21,12 +21,12 @@ export interface SystemConfig {
 const DEFAULT_CONFIG: SystemConfig = {
   id: "config_padrao",
   empresaId: "empresa_solarmais_1",
-  nomeEmpresa: "EBS Energia Solar",
+  nomeEmpresa: "EBS Engenharia e Energia Solar",
   nomeConsultor: "Samuel",
   msgBoasVindas:
-    "Olá! Seja muito bem-vindo à EBS Energia Solar ☀️.\n\n[1/6] 📍 Para iniciarmos sua simulação rápida e personalizada, por onde você conheceu nossa empresa?",
+    "Olá! Seja muito bem-vindo à EBS Engenharia e Energia Solar ☀️.\n\n[1/6] 📍 Para iniciarmos sua simulação rápida e personalizada, por onde você conheceu nossa empresa?",
   msgConclusao:
-    "Excelente! Suas informações foram registradas com sucesso ✅\n\nNossa equipe de consultores da EBS Energia Solar já recebeu sua simulação e vai continuar seu atendimento aqui em instantes com a sua proposta personalizada!",
+    "Excelente! Suas informações foram registradas com sucesso ✅\n\nNossa equipe de consultores da EBS Engenharia e Energia Solar já recebeu sua simulação e vai continuar seu atendimento aqui em instantes com a sua proposta personalizada!",
   percentualEconomia: 92,
   multiplicadorProposta: 25,
   valorMinimoLeadQuente: 300,

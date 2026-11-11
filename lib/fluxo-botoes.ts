@@ -398,7 +398,7 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
   const msgBoasVindas =
     cfg.msgBoasVindas && cfg.msgBoasVindas.includes("[1/6]")
       ? cfg.msgBoasVindas
-      : "Olá! Seja muito bem-vindo à EBS Energia Solar ☀️.\n\n[1/6] 📍 Para iniciarmos sua simulação rápida e personalizada, por onde você conheceu nossa empresa?";
+      : "Olá! Seja muito bem-vindo à EBS Engenharia e Energia Solar ☀️.\n\n[1/6] 📍 Para iniciarmos sua simulação rápida e personalizada, por onde você conheceu nossa empresa?";
 
   const waId = await sendInteractiveButtons(
     telefone,

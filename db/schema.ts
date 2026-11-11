@@ -264,17 +264,17 @@ export const configuracoesSistema = pgTable("configuracoes_sistema", {
   empresaId: text("empresa_id")
     .notNull()
     .references(() => empresas.id, { onDelete: "cascade" }),
-  nomeEmpresa: text("nome_empresa").notNull().default("EBS Energia Solar"),
+  nomeEmpresa: text("nome_empresa").notNull().default("EBS Engenharia e Energia Solar"),
   nomeConsultor: text("nome_consultor").notNull().default("Samuel"),
   msgBoasVindas: text("msg_boas_vindas")
     .notNull()
     .default(
-      "Olá! Seja muito bem-vindo à EBS Energia Solar ☀️.\n\nPara iniciarmos sua simulação rápida e personalizada, por onde você conheceu nossa empresa?"
+      "Olá! Seja muito bem-vindo à EBS Engenharia e Energia Solar ☀️.\n\nPara iniciarmos sua simulação rápida e personalizada, por onde você conheceu nossa empresa?"
     ),
   msgConclusao: text("msg_conclusao")
     .notNull()
     .default(
-      "Excelente! Suas informações foram registradas com sucesso ✅\n\nNossa equipe de consultores da EBS Energia Solar já recebeu sua simulação e vai continuar seu atendimento aqui em instantes com a sua proposta personalizada!"
+      "Excelente! Suas informações foram registradas com sucesso ✅\n\nNossa equipe de consultores da EBS Engenharia e Energia Solar já recebeu sua simulação e vai continuar seu atendimento aqui em instantes com a sua proposta personalizada!"
     ),
   percentualEconomia: numeric("percentual_economia", {
     precision: 5,

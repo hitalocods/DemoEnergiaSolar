@@ -44,8 +44,8 @@ export function formatRelativeDay(iso: string) {
 
 export function whatsappUrl(phone: string, name?: string) {
   const text = name
-    ? `Olá, ${name.split(" ")[0]}! Aqui é da EBS Energia Solar, tudo bem? ☀️`
-    : "Olá! Aqui é da EBS Energia Solar ☀️";
+    ? `Olá, ${name.split(" ")[0]}! Aqui é da EBS Engenharia e Energia Solar, tudo bem? ☀️`
+    : "Olá! Aqui é da EBS Engenharia e Energia Solar ☀️";
   return `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
 }
 
