@@ -77,7 +77,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    let body: any = {};
+    let body: Record<string, string | undefined> = {};
     try {
       body = await request.json();
     } catch {
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
     const numeroPublico = (
       process.env.WHATSAPP_NUMERO_PUBLICO ||
       cfg.telefoneNotificacao ||
-      "558688269144"
+      "558681253371"
     ).replace(/\D/g, "");
 
     const mensagemBase =

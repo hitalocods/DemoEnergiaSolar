@@ -46,3 +46,6 @@ next-env.d.ts
 
 cloudflared.exe
 
+
+# backups locais do banco (contêm dados pessoais de leads)
+/backup/

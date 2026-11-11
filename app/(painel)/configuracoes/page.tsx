@@ -13,7 +13,7 @@ export default async function ConfiguracoesPage() {
   const whatsappNumero =
     process.env.WHATSAPP_NUMERO_PUBLICO ||
     config.telefoneNotificacao ||
-    "558688269144";
+    "558681253371";
 
   return (
     <div className="space-y-8">

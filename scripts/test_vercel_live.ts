@@ -5,8 +5,8 @@ async function test() {
     const body = await res.text();
     console.log("Status retornado pela Vercel:", res.status);
     console.log("Corpo retornado pela Vercel:", body);
-  } catch (e: any) {
-    console.error("Erro ao conectar na Vercel:", e.message);
+  } catch (e: unknown) {
+    console.error("Erro ao conectar na Vercel:", e instanceof Error ? e.message : e);
   }
 }
 test();

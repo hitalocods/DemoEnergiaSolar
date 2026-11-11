@@ -47,9 +47,24 @@ export function normalizePhoneBR(phone: string): string {
  * Retorna as credenciais configuradas da Meta Cloud API (100% dinâmicas por env).
  */
 export function getWhatsAppConfig() {
-  const token = (process.env.WHATSAPP_TOKEN || process.env.WHATSAPP_API_TOKEN || "").trim();
-  const phoneNumberId = (process.env.PHONE_NUMBER_ID || process.env.WHATSAPP_PHONE_NUMBER_ID || "").trim();
-  const wabaId = (process.env.WABA_ID || process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || "").trim();
+  // Nomes oficiais primeiro; nomes antigos ficam só como fallback de compatibilidade.
+  const token = (
+    process.env.WHATSAPP_ACCESS_TOKEN ||
+    process.env.WHATSAPP_TOKEN ||
+    process.env.WHATSAPP_API_TOKEN ||
+    ""
+  ).trim();
+  const phoneNumberId = (
+    process.env.WHATSAPP_PHONE_NUMBER_ID ||
+    process.env.PHONE_NUMBER_ID ||
+    ""
+  ).trim();
+  const wabaId = (
+    process.env.WHATSAPP_WABA_ID ||
+    process.env.WABA_ID ||
+    process.env.WHATSAPP_BUSINESS_ACCOUNT_ID ||
+    ""
+  ).trim();
   const verifyToken = (process.env.VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || "").trim();
   const appSecret = (process.env.APP_SECRET || process.env.META_APP_SECRET || "").trim();
   const apiVersion = (process.env.WHATSAPP_API_VERSION || "v23.0").trim();
@@ -88,7 +103,7 @@ export async function sendText(to: string, text: string): Promise<string> {
   const config = getWhatsAppConfig();
   if (!config.token || !config.phoneNumberId) {
     throw new Error(
-      "Credenciais do WhatsApp ausentes: configure WHATSAPP_TOKEN e PHONE_NUMBER_ID nas variáveis de ambiente."
+      "Credenciais do WhatsApp ausentes: configure WHATSAPP_ACCESS_TOKEN e WHATSAPP_PHONE_NUMBER_ID nas variáveis de ambiente."
     );
   }
 
@@ -183,7 +198,7 @@ export async function sendInteractiveButtons(
 
   const config = getWhatsAppConfig();
   if (!config.token || !config.phoneNumberId) {
-    throw new Error("Credenciais do WhatsApp ausentes: configure WHATSAPP_TOKEN e PHONE_NUMBER_ID.");
+    throw new Error("Credenciais do WhatsApp ausentes: configure WHATSAPP_ACCESS_TOKEN e WHATSAPP_PHONE_NUMBER_ID.");
   }
 
   const targetPhone = normalizePhoneBR(to);
@@ -266,7 +281,7 @@ export async function sendInteractiveList(
 
   const config = getWhatsAppConfig();
   if (!config.token || !config.phoneNumberId) {
-    throw new Error("Credenciais do WhatsApp ausentes: configure WHATSAPP_TOKEN e PHONE_NUMBER_ID.");
+    throw new Error("Credenciais do WhatsApp ausentes: configure WHATSAPP_ACCESS_TOKEN e WHATSAPP_PHONE_NUMBER_ID.");
   }
 
   const targetPhone = normalizePhoneBR(to);

@@ -197,10 +197,24 @@ async function processWebhookPayload(
   const empresaRows = await db.select().from(empresas).limit(1);
   const empresaId = empresaRows[0]?.id || "empresa_solarmais_1";
 
+  // Phone Number ID configurado (usado só para alertar divergências; não descarta mensagens)
+  const phoneNumberIdConfigurado = getWhatsAppConfig().phoneNumberId;
+
   for (const entry of entries) {
     for (const change of entry.changes || []) {
       const val = change.value;
       if (!val) continue;
+
+      const phoneNumberIdRecebido = val.metadata?.phone_number_id || "desconhecido";
+      if (
+        phoneNumberIdConfigurado &&
+        phoneNumberIdRecebido !== "desconhecido" &&
+        phoneNumberIdRecebido !== phoneNumberIdConfigurado
+      ) {
+        console.warn(
+          `⚠️ [WEBHOOK] phone_number_id recebido (${phoneNumberIdRecebido}) difere do configurado em WHATSAPP_PHONE_NUMBER_ID (${phoneNumberIdConfigurado}). A mensagem será processada, mas as respostas sairão pelo número configurado.`
+        );
+      }
 
       // =========================================================================
       // 1. Processar status de entrega assíncronos da Meta (sent, delivered, read, failed)
@@ -264,7 +278,7 @@ async function processWebhookPayload(
             console.error("Erro ao atualizar status da mensagem no CRM:", statusErr);
           }
         }
-        continue;
+        // Statuses só atualizam a entrega; nunca criam lead.
       }
 
       // =========================================================================
@@ -275,12 +289,18 @@ async function processWebhookPayload(
       }
 
       for (const message of val.messages) {
+        // Telefone: prioriza contacts[].wa_id (padrão Cloud API), com fallback em message.from
+        const rawFrom = message.from;
+        const contact =
+          val.contacts?.find((c) => c.wa_id === rawFrom) || val.contacts?.[0];
+        const rawPhone = contact?.wa_id || rawFrom;
         // Normaliza o número recebido garantindo formato BR com 9 dígitos
-        const rawPhone = message.from;
         const telefone = normalizePhoneBR(rawPhone);
-
-        const contact = val.contacts?.find((c: any) => c.wa_id === rawPhone || c.wa_id === telefone);
         const contactName = contact?.profile?.name || rawPhone;
+
+        console.log(
+          `[WEBHOOK MSG] phone_number_id=${phoneNumberIdRecebido} from=${rawFrom} type=${message.type}`
+        );
 
         const messageDate = message.timestamp
           ? new Date(Number(message.timestamp) * 1000)

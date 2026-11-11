@@ -2,8 +2,8 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 
 async function runDirectTest() {
-  const token = process.env.WHATSAPP_TOKEN;
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const token = process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_TOKEN;
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.PHONE_NUMBER_ID;
 
   const numbers = ["5586988269144", "558688269144"];
 

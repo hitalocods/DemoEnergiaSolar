@@ -2,8 +2,8 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 
 async function main() {
-  const token = process.env.WHATSAPP_TOKEN;
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const token = process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_TOKEN;
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.PHONE_NUMBER_ID;
 
   console.log("Token:", token?.slice(0, 15) + "...");
   console.log("PhoneId:", phoneId);
