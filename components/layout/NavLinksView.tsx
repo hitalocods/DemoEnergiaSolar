@@ -82,12 +82,9 @@ export function NavLinksView({
               />
               <span className="flex-1">{label}</span>
               {href === "/configuracoes" && (
-                <span className="relative flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/20">
-                  <span className="relative flex size-1.5">
-                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
-                  </span>
-                  R$ 100
+                <span className="relative flex size-2">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
                 </span>
               )}
               {!!badges[href] && (
