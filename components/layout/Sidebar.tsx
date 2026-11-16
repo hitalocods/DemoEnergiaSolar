@@ -60,14 +60,17 @@ export function Sidebar({
         {/* CARD LICENÇA ATLAS SOFTWARE */}
         <Link
           href="/configuracoes"
-          className="group block rounded-2xl border border-slate-800 bg-slate-900/60 p-3 transition hover:border-slate-700 hover:bg-slate-900"
+          className="group relative block rounded-2xl border border-slate-800 bg-slate-900/60 p-3 transition hover:border-slate-700 hover:bg-slate-900"
         >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-slate-300">
               Licença Atlas Software
             </span>
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
-              <span className="size-1.5 rounded-full bg-emerald-400" />
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400">
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
+              </span>
               Ativa
             </span>
           </div>

@@ -128,10 +128,19 @@ export function SecaoLicencaAtlas() {
             href={linkPagamento}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-900/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="group relative w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-emerald-600 to-teal-500 hover:from-blue-500 hover:to-emerald-400 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-950/50 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            <span>Gerenciar / Pagar Assinatura</span>
-            <ExternalLink className="size-4" />
+            {/* Efeito pulsante suave e perceptível ao redor */}
+            <span className="absolute -inset-0.5 -z-10 rounded-xl bg-gradient-to-r from-blue-500 to-emerald-500 opacity-60 blur-sm animate-pulse" />
+            
+            {/* Ponto de luz pulsando no botão */}
+            <span className="relative flex size-2">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-white opacity-75" />
+              <span className="relative inline-flex size-2 rounded-full bg-white" />
+            </span>
+
+            <span>Assinar Licença / Cadastrar</span>
+            <ExternalLink className="size-4 transition-transform group-hover:translate-x-0.5" />
           </a>
         </div>
       </div>
