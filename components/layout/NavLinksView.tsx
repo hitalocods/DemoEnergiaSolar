@@ -43,6 +43,12 @@ export function NavLinksView({
                   <Icon className="size-[18px]" strokeWidth={active ? 2.4 : 2} />
                 </span>
                 {short}
+                {href === "/configuracoes" && (
+                  <span className="absolute right-[calc(50%-20px)] top-1 flex size-2">
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+                  </span>
+                )}
                 {!!badges[href] && (
                   <span className="absolute right-[calc(50%-22px)] top-1.5 size-2 rounded-full bg-red-500 ring-2 ring-white" />
                 )}
@@ -75,6 +81,15 @@ export function NavLinksView({
                 className={cn("size-[18px] transition-colors", active ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300")}
               />
               <span className="flex-1">{label}</span>
+              {href === "/configuracoes" && (
+                <span className="relative flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/20">
+                  <span className="relative flex size-1.5">
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
+                  </span>
+                  R$ 100
+                </span>
+              )}
               {!!badges[href] && (
                 <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[11px] font-bold text-white tabular">
                   {badges[href]}
