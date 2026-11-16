@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomNav, Topbar } from "@/components/layout/Topbar";
+import { LiveSyncProvider } from "@/components/pwa/LiveSyncProvider";
 import { requireSessionUser } from "@/lib/auth";
 import { getLeads } from "@/lib/data";
 
@@ -15,7 +16,7 @@ export default async function PainelLayout({
   ).length;
 
   return (
-    <>
+    <LiveSyncProvider>
       <Sidebar user={user} pendingCount={pendingCount} />
       <div className="flex min-h-dvh flex-col lg:pl-64 w-full max-w-full overflow-x-hidden">
         <Topbar user={user} />
@@ -24,6 +25,6 @@ export default async function PainelLayout({
         </main>
       </div>
       <BottomNav pendingCount={pendingCount} />
-    </>
+    </LiveSyncProvider>
   );
 }

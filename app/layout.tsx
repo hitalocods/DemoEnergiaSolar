@@ -17,6 +17,13 @@ export const metadata: Metadata = {
     "Painel de atendimento e conversão de leads da EBS Energia Solar: acompanhe a IA, assuma conversas e feche mais vendas de energia solar.",
   icons: {
     icon: "/ebs-logo.png",
+    apple: "/ebs-logo.png",
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "EBS Solar",
   },
 };
 

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Bell, Search } from "lucide-react";
 import type { SessionUser } from "@/lib/auth";
 import { Avatar } from "@/components/ui/Avatar";
+import { BotaoInstalarApp } from "@/components/pwa/BotaoInstalarApp";
 import { Logo } from "./Logo";
 import { NavLinks } from "./NavLinks";
 import { NavLinksView } from "./NavLinksView";
@@ -18,14 +19,8 @@ export function Topbar({ user }: { user?: SessionUser | null }) {
         <Link href="/dashboard">
           <Logo className="scale-90 origin-left" />
         </Link>
-        <div className="flex items-center gap-1">
-          <button
-            aria-label="Notificações"
-            className="relative rounded-xl p-2 text-slate-300 hover:bg-white/5"
-          >
-            <Bell className="size-5" />
-            <span className="absolute right-2 top-2 size-2 rounded-full bg-orange-500 ring-2 ring-ink" />
-          </button>
+        <div className="flex items-center gap-2">
+          <BotaoInstalarApp className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600/90 hover:bg-blue-600 px-2.5 py-1.5 text-[11px] font-bold text-white shadow-sm" />
           <Link href="/dashboard" aria-label="Conta">
             <Avatar name={displayName} size="sm" />
           </Link>
@@ -45,6 +40,7 @@ export function Topbar({ user }: { user?: SessionUser | null }) {
           />
         </label>
         <div className="ml-auto flex items-center gap-3">
+          <BotaoInstalarApp />
           <span className="hidden items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/15 xl:inline-flex">
             <span className="size-1.5 rounded-full bg-emerald-500" />
             WhatsApp conectado
