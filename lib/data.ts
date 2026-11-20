@@ -47,7 +47,7 @@ function mapLeadRow(
     ownProperty: row.imovelProprio,
     wantsFinancing: row.financiamento,
     adSource: row.origem,
-    origemTipo: (row.origemTipo as any) || "direto",
+    origemTipo: (row.origemTipo as Lead["origemTipo"]) || "direto",
     campanhaUtm: row.campanhaUtm ?? null,
     gclid: row.gclid ?? null,
     interest: row.campanha || "Economia na conta de energia",
@@ -365,7 +365,7 @@ export async function getMessages(leadId: string): Promise<Message[]> {
         url: m.anexoUrl,
       }
       : undefined,
-    statusEntrega: (m.statusEntrega as any) || (m.autor === "lead" ? undefined : "sent"),
+    statusEntrega: (m.statusEntrega as Message["statusEntrega"]) || (m.autor === "lead" ? undefined : "sent"),
     erroEntrega: m.erroEntrega,
   }));
 }

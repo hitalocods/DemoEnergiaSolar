@@ -23,7 +23,7 @@ import {
   sendMessage,
   updateLeadStage,
 } from "@/lib/data";
-import type { CanalRastreio, FunnelStageId, Lead, Message, Metrics, PeriodKey } from "@/lib/types";
+import type { CanalRastreio, FunnelStageId, Lead, Message, Metrics, PeriodKey, TipoCanalRastreio } from "@/lib/types";
 
 export interface ActionResult<T = unknown> {
   success: boolean;
@@ -315,7 +315,7 @@ export async function getCanaisRastreioAction(): Promise<CanalRastreio[]> {
       id: r.id,
       empresaId: r.empresaId,
       nome: r.nome,
-      tipo: r.tipo as any,
+      tipo: r.tipo as TipoCanalRastreio,
       codigo: r.codigo,
       mensagemPadrao: r.mensagemPadrao,
       ativo: r.ativo,
@@ -331,7 +331,7 @@ export async function getCanaisRastreioAction(): Promise<CanalRastreio[]> {
       nome: "Instagram Bio",
       tipo: "instagram" as const,
       codigo: "IGBIO1",
-      mensagemPadrao: "Olá! Vi o link no Instagram da EBS Energia Solar e gostaria de uma simulação",
+      mensagemPadrao: "Olá! Vi o link no Instagram da EBS Engenharia e Energia Solar e gostaria de uma simulação",
     },
     {
       id: `canal_${Date.now()}_2`,
@@ -339,7 +339,7 @@ export async function getCanaisRastreioAction(): Promise<CanalRastreio[]> {
       nome: "Google Meu Negócio",
       tipo: "google_meu_negocio" as const,
       codigo: "GMN001",
-      mensagemPadrao: "Olá! Encontrei a EBS Energia Solar no Google e quero economizar na minha conta de luz",
+      mensagemPadrao: "Olá! Encontrei a EBS Engenharia e Energia Solar no Google e quero economizar na minha conta de luz",
     },
     {
       id: `canal_${Date.now()}_3`,
@@ -347,7 +347,7 @@ export async function getCanaisRastreioAction(): Promise<CanalRastreio[]> {
       nome: "QR Code - Cartão / Panfleto",
       tipo: "qr" as const,
       codigo: "QRC001",
-      mensagemPadrao: "Olá! Escaneei o QR Code da EBS Energia Solar e quero conhecer a proposta",
+      mensagemPadrao: "Olá! Escaneei o QR Code da EBS Engenharia e Energia Solar e quero conhecer a proposta",
     },
   ];
 
@@ -409,7 +409,7 @@ export async function criarCanalRastreioAction(formData: FormData): Promise<{
     id,
     empresaId: user.empresaId,
     nome,
-    tipo: tipo as any,
+    tipo: tipo as TipoCanalRastreio,
     codigo,
     mensagemPadrao,
     ativo: true,
@@ -424,7 +424,7 @@ export async function criarCanalRastreioAction(formData: FormData): Promise<{
       id,
       empresaId: user.empresaId,
       nome,
-      tipo: tipo as any,
+      tipo: tipo as TipoCanalRastreio,
       codigo,
       mensagemPadrao,
       ativo: true,
@@ -455,7 +455,7 @@ export async function salvarConfiguracoesSistemaAction(formData: FormData): Prom
     const { invalidarCacheConfig } = await import("@/lib/config-helper");
 
     const nomeEmpresa =
-      (formData.get("nomeEmpresa") as string)?.trim() || "EBS Energia Solar";
+      (formData.get("nomeEmpresa") as string)?.trim() || "EBS Engenharia e Energia Solar";
     const nomeConsultor =
       (formData.get("nomeConsultor") as string)?.trim() || "Samuel";
     const msgBoasVindas = (formData.get("msgBoasVindas") as string)?.trim() || "";
@@ -534,11 +534,11 @@ export async function salvarConfiguracoesSistemaAction(formData: FormData): Prom
     revalidatePath("/chat");
 
     return { success: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Erro ao salvar configurações:", err);
     return {
       success: false,
-      error: err.message || "Erro ao salvar alterações no banco de dados.",
+      error: err instanceof Error ? err.message : "Erro ao salvar alterações no banco de dados.",
     };
   }
 }

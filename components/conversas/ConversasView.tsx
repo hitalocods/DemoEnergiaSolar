@@ -59,25 +59,13 @@ export function ConversasView({
 
   const [leadsList, setLeadsList] = useState<Lead[]>(initialLeads);
   const [selectedId, setSelectedId] = useState<string | null>(
-    initialLeadId || null
+    initialLeadId || initialLeads[0]?.id || null
   );
   const [busca, setBusca] = useState("");
   const [tab, setTab] = useState<FilterTab>("todas");
   const [profileOpen, setProfileOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  // No desktop (>= 768px), se nenhuma conversa estiver aberta, seleciona a primeira por padrão
-  useEffect(() => {
-    if (
-      !selectedId &&
-      initialLeads.length > 0 &&
-      typeof window !== "undefined" &&
-      window.innerWidth >= 768
-    ) {
-      setSelectedId(initialLeads[0].id);
-    }
-  }, [initialLeads, selectedId]);
 
   // Lead selecionado atual
   const selectedLead = useMemo(
@@ -93,7 +81,10 @@ export function ConversasView({
     revalidateOnFocus: true,
   });
 
-  const messages = messagesData?.messages ?? [];
+  const messages = useMemo(
+    () => messagesData?.messages ?? [],
+    [messagesData?.messages]
+  );
 
   // Rola até o final ao receber mensagens novas
   useEffect(() => {

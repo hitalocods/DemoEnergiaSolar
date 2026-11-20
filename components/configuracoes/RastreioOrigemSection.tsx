@@ -90,19 +90,22 @@ export function RastreioOrigemSection({
   const numLimpo = whatsappNumero.replace(/\D/g, "") || "5586994127788";
 
   useEffect(() => {
-    void carregarCanais();
-  }, []);
-
-  async function carregarCanais() {
-    try {
-      const data = await getCanaisRastreioAction();
-      setCanais(data);
-    } catch (err) {
-      console.error("Erro ao carregar canais:", err);
-    } finally {
-      setLoading(false);
+    let cancelado = false;
+    async function carregarCanais() {
+      try {
+        const data = await getCanaisRastreioAction();
+        if (!cancelado) setCanais(data);
+      } catch (err) {
+        console.error("Erro ao carregar canais:", err);
+      } finally {
+        if (!cancelado) setLoading(false);
+      }
     }
-  }
+    void carregarCanais();
+    return () => {
+      cancelado = true;
+    };
+  }, []);
 
   function getWaUrl(canal: CanalRastreio) {
     const texto = `${canal.mensagemPadrao} (ref: ${canal.codigo})`;
