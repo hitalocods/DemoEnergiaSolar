@@ -36,6 +36,7 @@ import {
   formatPhone,
   STAGE_META,
   STAGE_ORDER,
+  whatsappUrl,
   yesNo,
 } from "@/lib/utils";
 import { Avatar } from "@/components/ui/Avatar";
@@ -158,7 +159,7 @@ export function LeadProfile({ lead, onClose, onLeadUpdate }: LeadProfileProps) {
           {/* Botões de Ação Imediata */}
           <div className="mt-4 flex w-full flex-col gap-2">
             <ButtonLink
-              href={`https://wa.me/${currentLead.phone.replace(/\D/g, "")}`}
+              href={whatsappUrl(currentLead.phone, currentLead.name)}
               external
               variant="whatsapp"
               size="sm"

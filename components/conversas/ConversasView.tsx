@@ -31,7 +31,7 @@ import {
   sendMessageAction,
 } from "@/app/actions";
 import type { AttendanceMode, Lead, Message } from "@/lib/types";
-import { cn, formatPhone, stripRefCode } from "@/lib/utils";
+import { cn, formatPhone, stripRefCode, whatsappUrl } from "@/lib/utils";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { AttendanceToggle } from "@/components/chat/AttendanceToggle";
@@ -130,27 +130,29 @@ export function ConversasView({
   async function handleSend(text: string) {
     if (!selectedLead) return;
     try {
-      const sent = await sendMessageAction(selectedLead.id, text);
-      if (sent) {
-        // Atualiza mensagens imediatamente na tela
-        void mutateMessages(
-          { messages: [...messages, sent] },
-          { revalidate: false }
-        );
-
-        // Atualiza última mensagem na lista
-        setLeadsList((prev) =>
-          prev.map((l) =>
-            l.id === selectedLead.id
-              ? {
-                  ...l,
-                  lastMessage: text,
-                  lastLeadMessageAt: new Date().toISOString(),
-                }
-              : l
-          )
-        );
+      const res = await sendMessageAction(selectedLead.id, text);
+      if (!res.success || !res.data) {
+        throw new Error(res.error || "Erro ao enviar mensagem.");
       }
+      const sent = res.data;
+
+      // Atualiza mensagens imediatamente na tela
+      void mutateMessages(
+        { messages: [...messages, sent] },
+        { revalidate: false }
+      );
+
+      // Atualiza última mensagem na lista (sem alterar lastLeadMessageAt)
+      setLeadsList((prev) =>
+        prev.map((l) =>
+          l.id === selectedLead.id
+            ? {
+                ...l,
+                lastMessage: text,
+              }
+            : l
+        )
+      );
     } catch (err) {
       console.error("Erro ao enviar mensagem:", err);
       throw err;
@@ -178,6 +180,18 @@ export function ConversasView({
   }
 
   const isHuman = selectedLead?.attendance === "humano";
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const windowExpired = selectedLead
+    ? !selectedLead.lastLeadMessageAt ||
+      nowMs - new Date(selectedLead.lastLeadMessageAt).getTime() >
+        24 * 60 * 60 * 1000
+    : false;
 
   return (
     <div className="flex h-[calc(100dvh-11rem)] sm:h-[calc(100dvh-9.5rem)] lg:h-[calc(100dvh-7.5rem)] min-h-0 w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-soft">
@@ -426,7 +440,7 @@ export function ConversasView({
                 />
 
                 <ButtonLink
-                  href={`https://wa.me/${selectedLead.phone.replace(/\D/g, "")}`}
+                  href={whatsappUrl(selectedLead.phone, selectedLead.name)}
                   external
                   variant="whatsapp"
                   size="sm"
@@ -539,10 +553,14 @@ export function ConversasView({
 
             {/* Composer de Digitação */}
             <ChatComposer
+              key={selectedLead.id}
               enabled={isHuman}
               onSend={handleSend}
               onAssumir={() => changeMode("humano")}
               assuming={busy}
+              windowExpired={windowExpired}
+              leadPhone={selectedLead.phone}
+              leadName={selectedLead.name}
             />
           </>
         ) : (

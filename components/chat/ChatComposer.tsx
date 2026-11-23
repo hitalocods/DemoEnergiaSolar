@@ -4,13 +4,15 @@ import { useRef, useState } from "react";
 import {
   AlertCircle,
   Bot,
+  Clock,
+  ExternalLink,
   Loader2,
   Paperclip,
   SendHorizontal,
   Smile,
   UserCheck,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, whatsappUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 
 const QUICK_REPLIES = [
@@ -29,11 +31,17 @@ export function ChatComposer({
   onSend,
   onAssumir,
   assuming,
+  windowExpired = false,
+  leadPhone,
+  leadName,
 }: {
   enabled: boolean;
   onSend: (text: string) => Promise<void>;
   onAssumir: () => void;
   assuming: boolean;
+  windowExpired?: boolean;
+  leadPhone?: string;
+  leadName?: string;
 }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -98,8 +106,31 @@ export function ChatComposer({
     );
   }
 
+  const cleanPhone = leadPhone?.replace(/\D/g, "") || "";
+
   return (
     <div className="border-t border-slate-200/70 bg-white p-3 sm:p-4">
+      {windowExpired && (
+        <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-inset ring-amber-200">
+          <div className="flex items-center gap-2 font-medium">
+            <Clock className="size-4 shrink-0 text-amber-600" />
+            <span>
+              Janela de 24h expirada pela Meta: texto livre pelo painel só funciona dentro de 24h após a última mensagem do cliente.
+            </span>
+          </div>
+          {cleanPhone && (
+            <a
+              href={whatsappUrl(cleanPhone, leadName, text)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-emerald-700"
+            >
+              Abrir no WhatsApp <ExternalLink className="size-3" />
+            </a>
+          )}
+        </div>
+      )}
+
       {errorMsg && (
         <div className="mb-2.5 flex items-center justify-between rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-200 animate-pop">
           <div className="flex items-center gap-1.5">

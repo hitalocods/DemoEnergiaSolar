@@ -3,6 +3,7 @@ import { leads, mensagens, oportunidades } from "@/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { sendInteractiveButtons, sendText } from "@/lib/whatsapp";
 import { getSystemConfig } from "@/lib/config-helper";
+import { getMensagemConclusao } from "@/lib/expediente";
 import type { OrigemTipo } from "@/lib/types";
 
 type TipoImovelDB = "residencial" | "comercial" | "rural";
@@ -106,7 +107,7 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
       });
     }
 
-    const msgFinal = cfg.msgConclusao;
+    const msgFinal = getMensagemConclusao(cfg.msgConclusao, cfg.nomeEmpresa);
 
     const waId = await sendText(telefone, msgFinal);
 

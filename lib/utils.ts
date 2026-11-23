@@ -42,10 +42,13 @@ export function formatRelativeDay(iso: string) {
   return `${date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}, ${time}`;
 }
 
-export function whatsappUrl(phone: string, name?: string) {
-  const text = name
-    ? `Olá, ${name.split(" ")[0]}! Aqui é da EBS Engenharia e Energia Solar, tudo bem? ☀️`
-    : "Olá! Aqui é da EBS Engenharia e Energia Solar ☀️";
+export function whatsappUrl(phone: string, name?: string, customText?: string) {
+  const trimmed = customText?.trim();
+  const text =
+    trimmed ||
+    (name
+      ? `Olá, ${name.split(" ")[0]}! Aqui é da EBS Engenharia e Energia Solar, tudo bem? ☀️`
+      : "Olá! Aqui é da EBS Engenharia e Energia Solar ☀️");
   return `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
 }
 

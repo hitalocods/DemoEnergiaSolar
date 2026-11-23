@@ -117,7 +117,11 @@ export function LeadConversation({
   async function handleSend(text: string) {
     if (!lead) return;
     try {
-      const sent = await sendMessageAction(lead.id, text);
+      const res = await sendMessageAction(lead.id, text);
+      if (!res.success || !res.data) {
+        throw new Error(res.error || "Erro ao enviar mensagem.");
+      }
+      const sent = res.data;
       mutate({ messages: [...(messages ?? []), sent] }, false);
       mutate();
       router.refresh();
@@ -126,6 +130,13 @@ export function LeadConversation({
       throw err;
     }
   }
+
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   if (!lead) {
     return (
@@ -145,6 +156,9 @@ export function LeadConversation({
   }
 
   const isHuman = lead.attendance === "humano";
+  const windowExpired =
+    !lead.lastLeadMessageAt ||
+    nowMs - new Date(lead.lastLeadMessageAt).getTime() > 24 * 60 * 60 * 1000;
 
   return (
     <div className={`flex flex-col gap-4 ${VIEWPORT_HEIGHT}`}>
@@ -225,7 +239,7 @@ export function LeadConversation({
           )}
 
           <ButtonLink
-            href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
+            href={whatsappUrl(lead.phone, lead.name)}
             external
             variant="whatsapp"
             size="sm"
@@ -257,7 +271,7 @@ export function LeadConversation({
                 </p>
                 <div className="mt-4 flex justify-center">
                   <ButtonLink
-                    href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
+                    href={whatsappUrl(lead.phone, lead.name)}
                     external
                     variant="whatsapp"
                     size="sm"
@@ -301,6 +315,9 @@ export function LeadConversation({
             onSend={handleSend}
             onAssumir={() => changeMode("humano")}
             assuming={busy}
+            windowExpired={windowExpired}
+            leadPhone={lead.phone}
+            leadName={lead.name}
           />
         </section>
 

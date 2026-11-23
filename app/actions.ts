@@ -146,48 +146,74 @@ export async function updateLeadStageAction(
 export async function sendMessageAction(
   leadId: string,
   text: string
-): Promise<Message> {
-  const user = await requireSessionUser();
+): Promise<ActionResult<Message>> {
+  try {
+    let user;
+    try {
+      user = await requireSessionUser();
+    } catch {
+      return {
+        success: false,
+        error: "Sessão expirada. Recarregue a página e faça login novamente.",
+      };
+    }
 
-  const leadRows = await db
-    .select()
-    .from(leads)
-    .where(and(eq(leads.id, leadId), eq(leads.empresaId, user.empresaId)))
-    .limit(1);
+    const leadRows = await db
+      .select()
+      .from(leads)
+      .where(and(eq(leads.id, leadId), eq(leads.empresaId, user.empresaId)))
+      .limit(1);
 
-  if (leadRows.length === 0) {
-    throw new Error("Lead não encontrado.");
+    if (leadRows.length === 0) {
+      return { success: false, error: "Lead não encontrado." };
+    }
+
+    const lead = leadRows[0];
+
+    if (lead.atendimento !== "humano") {
+      return {
+        success: false,
+        error: "Assuma o lead antes de enviar mensagens.",
+      };
+    }
+
+    // Validação da janela de 24h da Meta para mensagens free-form iniciadas pela empresa
+    if (!lead.ultimaMsgLeadEm) {
+      return {
+        success: false,
+        error:
+          "Janela de 24h fechada: o lead ainda não enviou mensagem pelo WhatsApp. Respostas livres (free-form) só são permitidas dentro de 24h da última mensagem do lead; fora dela a Meta exige template aprovado.",
+      };
+    }
+
+    const elapsedMs = Date.now() - new Date(lead.ultimaMsgLeadEm).getTime();
+    const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+    if (elapsedMs > twentyFourHoursMs) {
+      return {
+        success: false,
+        error:
+          "Janela de 24h expirada: o lead não interagiu nas últimas 24 horas. A Meta exige envio de um template aprovado para reabrir a conversa.",
+      };
+    }
+
+    // Envia via WhatsApp (ou simula em dry-run se WHATSAPP_DRY_RUN=true)
+    const waMessageId = await sendText(lead.telefone, text);
+
+    // Só salva a mensagem no banco se o envio der certo
+    const msg = await sendMessage(leadId, text, "humano", waMessageId);
+    revalidatePath(`/leads/${leadId}`);
+    revalidatePath("/leads");
+    return { success: true, data: msg };
+  } catch (err: unknown) {
+    console.error("Erro em sendMessageAction:", err);
+    return {
+      success: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : "Erro ao enviar mensagem pelo WhatsApp.",
+    };
   }
-
-  const lead = leadRows[0];
-
-  if (lead.atendimento !== "humano") {
-    throw new Error("Assuma o lead antes de enviar mensagens.");
-  }
-
-  // Validação da janela de 24h da Meta para mensagens free-form iniciadas pela empresa
-  if (!lead.ultimaMsgLeadEm) {
-    throw new Error(
-      "Janela de 24h fechada: o lead ainda não enviou mensagem pelo WhatsApp. Respostas livres (free-form) só são permitidas dentro de 24h da última mensagem do lead; fora dela a Meta exige template aprovado."
-    );
-  }
-
-  const elapsedMs = Date.now() - new Date(lead.ultimaMsgLeadEm).getTime();
-  const twentyFourHoursMs = 24 * 60 * 60 * 1000;
-  if (elapsedMs > twentyFourHoursMs) {
-    throw new Error(
-      "Janela de 24h expirada: o lead não interagiu nas últimas 24 horas. A Meta exige envio de um template aprovado para reabrir a conversa."
-    );
-  }
-
-  // Envia via WhatsApp (ou simula em dry-run se WHATSAPP_DRY_RUN=true)
-  const waMessageId = await sendText(lead.telefone, text);
-
-  // Só salva a mensagem no banco se o envio der certo
-  const msg = await sendMessage(leadId, text, "humano", waMessageId);
-  revalidatePath(`/leads/${leadId}`);
-  revalidatePath("/leads");
-  return msg;
 }
 
 /** Obter métricas por período */
