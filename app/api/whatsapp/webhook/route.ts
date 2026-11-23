@@ -342,6 +342,7 @@ async function processWebhookPayload(
           telefone,
           nome: contactName,
           texto,
+          tipoMensagem: message.type,
           botaoId,
           anexoUrl,
           anexoTipo,

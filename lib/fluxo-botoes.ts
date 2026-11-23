@@ -13,6 +13,7 @@ export interface BotaoActionContext {
   telefone: string;
   empresaId: string;
   texto: string;
+  tipoMensagem?: string;
   botaoId?: string;
 }
 
@@ -28,7 +29,7 @@ export interface BotaoActionContext {
  * -> Transfere para consultor humano com Perfil do Lead 100% preenchido no CRM.
  */
 export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boolean> {
-  const { leadId, telefone, empresaId, texto, botaoId } = ctx;
+  const { leadId, telefone, empresaId, texto, tipoMensagem, botaoId } = ctx;
 
   const leadRows = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
   if (leadRows.length === 0) return false;
@@ -52,15 +53,80 @@ export async function processarFluxoBotoes(ctx: BotaoActionContext): Promise<boo
   const textoUpper = (texto || "").trim().toUpperCase();
   const idAcao = botaoId || "";
 
+  const MARCADOR_AVISO_AUDIO =
+    "consigo ler apenas mensagens de texto ou cliques nos botões";
+
   // Busca a última mensagem enviada pela IA para saber em qual pergunta o lead está
+  // (ignorando eventuais avisos de áudio para manter a etapa atual intacta)
   const ultimasMsgsIa = await db
     .select()
     .from(mensagens)
     .where(and(eq(mensagens.leadId, leadId), eq(mensagens.autor, "ia")))
     .orderBy(desc(mensagens.criadoEm))
-    .limit(1);
+    .limit(10);
 
-  const ultimaMsgIaTexto = ultimasMsgsIa[0]?.texto || "";
+  const ultimaMsgIaTexto =
+    ultimasMsgsIa.find((m) => !m.texto.includes(MARCADOR_AVISO_AUDIO))?.texto || "";
+
+  // =========================================================================
+  // TRATAMENTO DE ÁUDIO: não reinicia nem quebra a etapa atual do fluxo
+  // =========================================================================
+  const ehAudio =
+    tipoMensagem === "audio" ||
+    textoUpper.includes("[MENSAGEM DO TIPO AUDIO");
+
+  if (ehAudio) {
+    if (!ultimaMsgIaTexto) {
+      const msgBoasVindasBase =
+        cfg.msgBoasVindas && cfg.msgBoasVindas.includes("[1/6]")
+          ? cfg.msgBoasVindas
+          : "Olá! Seja muito bem-vindo à EBS Engenharia e Energia Solar ☀️.\n\n[1/6] 📍 Para iniciarmos sua simulação rápida e personalizada, por onde você conheceu nossa empresa?";
+
+      const msgAudioInicial =
+        "Recebi seu áudio! 🎙️ Por enquanto consigo ler apenas mensagens de texto ou cliques nos botões abaixo.\n\n" +
+        msgBoasVindasBase;
+
+      const waId = await sendInteractiveButtons(
+        telefone,
+        msgAudioInicial,
+        [
+          { id: "origem_google", title: "Google" },
+          { id: "origem_meta", title: "Instagram / Face" },
+          { id: "origem_indicacao", title: "Indicação / Outro" },
+        ],
+        "Selecione uma opção abaixo"
+      );
+
+      await db.insert(mensagens).values({
+        id: `${leadId}-bot-${Date.now()}`,
+        empresaId,
+        leadId,
+        autor: "ia",
+        texto: msgAudioInicial,
+        waMessageId: waId,
+        criadoEm: new Date(),
+      });
+
+      return true;
+    }
+
+    const msgAvisoAudio =
+      "Recebi seu áudio! 🎙️ Por enquanto consigo ler apenas mensagens de texto ou cliques nos botões — pode clicar na opção acima ou digitar sua resposta para eu continuar sua simulação? 😊";
+
+    const waId = await sendText(telefone, msgAvisoAudio);
+
+    await db.insert(mensagens).values({
+      id: `${leadId}-bot-${Date.now()}`,
+      empresaId,
+      leadId,
+      autor: "ia",
+      texto: msgAvisoAudio,
+      waMessageId: waId,
+      criadoEm: new Date(),
+    });
+
+    return true;
+  }
 
   // =========================================================================
   // ETAPA 6 -> CONCLUSÃO: Resposta de FINANCIAMENTO

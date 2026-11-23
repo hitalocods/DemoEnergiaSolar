@@ -11,6 +11,7 @@ export interface ProcessarMensagemOptions {
   telefone: string;
   nome?: string;
   texto?: string;
+  tipoMensagem?: string;
   botaoId?: string;
   anexoUrl?: string | null;
   anexoTipo?: string | null;
@@ -238,6 +239,7 @@ export async function processarMensagemInbound(options: ProcessarMensagemOptions
         telefone,
         empresaId,
         texto,
+        tipoMensagem: options.tipoMensagem,
         botaoId: options.botaoId,
       });
       console.log(`[PROCESSADOR] Fluxo de Botões executado com sucesso para ${leadId}`);
